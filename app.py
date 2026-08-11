@@ -41,13 +41,14 @@ def analyze_session(text, key):
     client = OpenAI(api_key=key)
     
     prompt = f"""
-    Você é um Sales Enablement Manager especializado em mentorias e vendas B2B de alto ticket.
-    Analise a transcrição abaixo com base nos 5 pilares do processo comercial da Ricarreira (Notas de 0 a 10):
+    Você é um Sales Enablement Manager especializado em mentorias e vendas B2B/High-Ticket na Ricarreira.
+    Analise a transcrição abaixo com base nos 6 pilares do processo comercial da Ricarreira (Notas de 0 a 10):
     1. Rapport e Conexão Inicial (criação de vínculo pessoal/contextual)
     2. Profundidade no Raio-X / Diagnóstico (investigação do 'porquê' das notas baixas)
-    3. Ancoragem de Valor e Prova Social (uso de depoimentos/ROI sem poluição visual)
-    4. Tratamento de Objeções (isolamento de dúvidas e negociação de preço)
-    5. Postura e Linguagem Comercial (firmeza, sem hesitações como 'eu acho')
+    3. Apresentação da Oferta & Entregáveis (clareza no mapa/caminho do aluno sem gerar objeção de excesso de conteúdo)
+    4. Ancoragem de Valor e Prova Social (uso de depoimentos/ROI sem poluição visual)
+    5. Tratamento de Objeções (isolamento de dúvidas e negociação de preço/condições)
+    6. Postura e Linguagem Comercial (firmeza, sem hesitações como 'eu acho')
 
     Retorne ESTRITAMENTE um objeto JSON válido (sem texto antes ou depois) no formato:
     {{
@@ -55,6 +56,7 @@ def analyze_session(text, key):
         "notas_criterios": {{
             "Rapport & Conexão": 8.5,
             "Diagnóstico / Raio-X": 7.5,
+            "Apresentação da Oferta": 6.8,
             "Ancoragem & Prova Social": 7.0,
             "Tratamento de Objeções": 6.5,
             "Postura & Linguagem": 8.0
@@ -65,9 +67,10 @@ def analyze_session(text, key):
         ],
         "oportunidades_melhoria": [
             "Aprofundar nos porquês das notas baixas do Raio-X antes de apresentar a solução.",
-            "Substituir o envio disperso de materiais pelo Mapa de Carreira de 51 dias."
+            "Na Oferta: Substituir o excesso de detalhes das trilhas pelo 'Mapa de Carreira de 51 dias' para focar na execução prática."
         ],
         "plano_de_acao": [
+            "Pitch da Oferta: Conectar cada entregável da oferta diretamente com uma dor dita pelo lead no Raio-X.",
             "Usar a pergunta de isolamento: 'Fora a questão do investimento, há algo mais que nos impede de começar?'",
             "Segmentar a entrega de bônus conforme o perfil do cliente (empregado x desempregado)."
         ]
@@ -92,7 +95,7 @@ if process_btn:
     elif not transcript:
         st.warning("Por favor, insira o texto da transcrição.")
     else:
-        with st.spinner("Analisando a sessão e processando as métricas..."):
+        with st.spinner("Analisando a sessão e processando as métricas de oferta e vendas..."):
             try:
                 data = analyze_session(transcript, api_key)
                 
@@ -108,7 +111,7 @@ if process_btn:
                 st.divider()
                 
                 # Gráfico e Notas
-                st.subheader("📈 Desempenho por Pilar Comercial")
+                st.subheader("📈 Desempenho por Pilar Comercial & Oferta")
                 
                 df = pd.DataFrame(
                     list(data["notas_criterios"].items()),
@@ -136,12 +139,12 @@ if process_btn:
                         st.success(f"• {pf}")
                         
                 with c_melhorias:
-                    st.subheader("🚨 Oportunidades")
+                    st.subheader("🚨 Oportunidades (Foco em Oferta)")
                     for om in data["oportunidades_melhoria"]:
                         st.warning(f"• {om}")
                         
                 with c_plano:
-                    st.subheader("💡 Plano de Ação")
+                    st.subheader("💡 Plano de Ação para Fechamento")
                     for pa in data["plano_de_acao"]:
                         st.info(f"• {pa}")
 

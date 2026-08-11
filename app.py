@@ -5,27 +5,40 @@ from openai import OpenAI
 
 # Configuração da página
 st.set_page_config(
-    page_title="1on1 Sales Copilot - Ricarreira",
+    page_title="Dashboard 1A1 - Ricarreira",
     page_icon="📊",
     layout="wide"
 )
 
-# Estilização CSS
+# Estilização Clean (CSS sutil para organizar o layout)
 st.markdown("""
 <style>
-    .metric-card {
-        background-color: #f8f9fa;
+    /* Remove espaçamentos exagerados no topo */
+    .block-container {
+        padding-top: 2rem;
+        padding-bottom: 2rem;
+    }
+    /* Estilo clean para os cards de métricas */
+    [data-testid="stMetric"] {
+        background-color: #ffffff;
+        border: 1px solid #e2e8f0;
+        padding: 12px 16px;
         border-radius: 8px;
-        padding: 15px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    /* Deixa os títulos das caixas mais limpos */
+    h3 {
+        font-size: 1.1rem !important;
+        font-weight: 600 !important;
+        margin-bottom: 0.8rem !important;
     }
 </style>
 """, unsafe_allow_html=True)
 
-st.title("📊 Dashboard de Avaliação - Sessão 1A1 & Closing Calls")
-st.caption("Avaliador Inteligente de Performance Comercial - Ricarreira")
+# Título Limpo
+st.title("📊 Dashboard de Feedbacks - Sessão 1A1")
+st.divider()
 
-# Lateral - Configurações
+# Barra Lateral - Entrada de Dados
 with st.sidebar:
     st.header("⚙️ Configurações da Chamada")
     api_key = st.text_input("OpenAI API Key", type="password")
@@ -34,26 +47,26 @@ with st.sidebar:
     closers = st.text_input("Avaliados / Closers", value="Fernanda Vazquez & Ricardo Batista")
     
     transcript = st.text_area("Cole a Transcrição da Sessão aqui:", height=300)
-    process_btn = st.button("🚀 Gerar Dashboard Detalhado", type="primary")
+    process_btn = st.button("🚀 Gerar Análise", type="primary", use_container_width=True)
 
-# Função de Análise Hiper-Específica
+# Função de Análise
 def analyze_session(text, key):
     client = OpenAI(api_key=key)
     
     prompt = f"""
     Você é um Sales Enablement Director e Coach Executivo de Vendas B2B/High-Ticket na Ricarreira.
-    Sua tarefa é analisar a transcrição de uma sessão de vendas/mentoria de forma HIPER-ESPECÍFICA e CRÍTICA.
-    PROIBIDO USAR FEEDBACKS GENÉRICOS OU CLICHÊS. Toda crítica ou elogio DEVE obrigatoriamente citar momentos, falas ou fatos ocorridos na chamada.
+    Analise a transcrição de uma sessão de vendas/mentoria de forma HIPER-ESPECÍFICA e CRÍTICA.
+    PROIBIDO USAR FEEDBACKS GENÉRICOS OU CLICHÊS. Cite momentos e falas exatas da chamada.
 
     Avalie a sessão com base nestes 6 pilares comerciais (Notas de 0 a 10):
-    1. Rapport e Conexão Inicial: Conexão sincera, quebra de gelo usando contexto real (ex: cidade, conexões em comum).
-    2. Profundidade no Raio-X / Diagnóstico: Investigação dos "porquês" por trás das notas baixas dadas pelo lead, fazendo-o verbalizar a dor.
-    3. Estrutura e Pitch da Oferta: Clareza na solução. Vendeu o "Mapa/Caminho" de execução em vez de poluir a tela com excesso de aulas/módulos. Segmentou bônus para o perfil exato (empregado vs desempregado).
-    4. Ancoragem de Valor e Prova Social: Uso de comparações de preço (ex: pós-graduação/MBA vs ROI prático) e exibição de casos reais/depoimentos.
-    5. Tratamento de Objeções e Negociação: Isolamento real de objeções de dinheiro/tempo, postura no fechamento e negociação de entrada/parcelamento sem queimar o valor do produto.
-    6. Postura e Linguagem Comercial: Firmeza, autoridade, ausência de vícios de hesitação ("eu acho", "talvez", "se você quiser").
+    1. Rapport e Conexão Inicial
+    2. Profundidade no Raio-X / Diagnóstico
+    3. Estrutura e Pitch da Oferta
+    4. Ancoragem de Valor e Prova Social
+    5. Tratamento de Objeções e Negociação
+    6. Postura e Linguagem Comercial
 
-    Retorne ESTRITAMENTE um objeto JSON válido no formato abaixo:
+    Retorne ESTRITAMENTE um objeto JSON válido no formato:
     {{
         "nota_geral": 7.5,
         "notas_criterios": {{
@@ -65,22 +78,17 @@ def analyze_session(text, key):
             "Postura & Linguagem": 7.5
         }},
         "pontos_fortes": [
-            "[Cite um momento específico ou fala exata do vendedor que funcionou muito bem]",
-            "[Cite outra evidência concreta identificada na transcrição]"
+            "Citação ou momento exato em que o closer se destacou positivamente."
         ],
-        "oportunidades_melhoria_oferta": [
-            "Análise detalhada do Pitch da Oferta: O que especificamente faltou ao apresentar os entregáveis, o valor ou o mapa da mentoria?",
-            "Erro/Incoerência técnica detectada: Apontar falha no diagnóstico, ancoragem ou condução da chamada.",
-            "Linguagem e Condução: Ajustes práticos de comunicação do closer."
+        "pontos_melhoria": [
+            "Falha prática ou técnica específica identificada no diagnóstico, oferta ou fechamento."
         ],
-        "plano_de_acao_fechamento": [
-            "Script/Frase exata a ser utilizada na próxima call ao apresentar a oferta.",
-            "Ação prática para o próximo tratamento de objeção de investimento/garantia.",
-            "Ajuste estrutural para a próxima sessão de vendas."
+        "pontos_atencao": [
+            "Alertas estratégicos, riscos de objeção não tratada ou comportamentos a monitorar."
         ]
     }}
 
-    Transcrição para Análise OBRIGATÓRIA:
+    Transcrição para Análise:
     {text}
     """
 
@@ -92,30 +100,27 @@ def analyze_session(text, key):
     
     return json.loads(response.choices[0].message.content)
 
-# Construção do Dashboard
+# Renderização do Dashboard
 if process_btn:
     if not api_key:
         st.error("Por favor, informe a sua OpenAI API Key na barra lateral.")
     elif not transcript:
         st.warning("Por favor, insira o texto da transcrição.")
     else:
-        with st.spinner("Analisando minutagem e falas da sessão..."):
+        with st.spinner("Analisando a sessão..."):
             try:
                 data = analyze_session(transcript, api_key)
                 
-                st.success("Análise detalhada concluída!")
-                st.divider()
-                
-                # Resumo
+                # Resumo em Cartões Limpos
                 col1, col2, col3 = st.columns(3)
-                col1.metric("Score Geral da Chamada", f"{data['nota_geral']} / 10")
+                col1.metric("Score Geral", f"{data['nota_geral']} / 10")
                 col2.metric("Lead Analisado", lead_name)
                 col3.metric("Equipe Avaliada", closers)
                 
                 st.divider()
                 
-                # Gráficos e Notas
-                st.subheader("📈 Avaliação por Pilar Comercial & Oferta")
+                # Gráfico e Métricas
+                st.subheader("📈 Desempenho por Pilar Comercial")
                 
                 df = pd.DataFrame(
                     list(data["notas_criterios"].items()),
@@ -134,25 +139,25 @@ if process_btn:
                 
                 st.divider()
                 
-                # Feedbacks Qualitativos Específicos
-                c_fortes, c_melhorias, c_plano = st.columns(3)
+                # Seção Clean de Feedbacks em 3 Colunas
+                c_fortes, c_melhoria, c_atencao = st.columns(3)
                 
                 with c_fortes:
-                    st.subheader("🎯 Pontos Fortes (Fatos Reais)")
+                    st.subheader("🎯 Pontos Fortes")
                     for pf in data["pontos_fortes"]:
                         st.success(f"• {pf}")
                         
-                with c_melhorias:
-                    st.subheader("🚨 Diagnóstico Crítico da Oferta")
-                    for om in data["oportunidades_melhoria_oferta"]:
-                        st.warning(f"• {om}")
+                with c_melhoria:
+                    st.subheader("🚨 Pontos de Melhoria")
+                    for pm in data["pontos_melhoria"]:
+                        st.warning(f"• {pm}")
                         
-                with c_plano:
-                    st.subheader("💡 Script & Plano de Ação")
-                    for pa in data["plano_de_acao_fechamento"]:
+                with c_atencao:
+                    st.subheader("💡 Pontos de Atenção")
+                    for pa in data["pontos_atencao"]:
                         st.info(f"• {pa}")
 
             except Exception as e:
                 st.error(f"Erro ao processar análise: {e}")
 else:
-    st.info("👈 Insira a API Key e a Transcrição na barra lateral para gerar a análise cirúrgica.")
+    st.info("👈 Insira a API Key e a Transcrição na barra lateral para carregar a análise.")

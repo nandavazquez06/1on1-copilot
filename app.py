@@ -10,7 +10,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# Estilização CSS para visual profissional
+# Estilização CSS
 st.markdown("""
 <style>
     .metric-card {
@@ -34,49 +34,53 @@ with st.sidebar:
     closers = st.text_input("Avaliados / Closers", value="Fernanda Vazquez & Ricardo Batista")
     
     transcript = st.text_area("Cole a Transcrição da Sessão aqui:", height=300)
-    process_btn = st.button("🚀 Gerar Dashboard de Feedback", type="primary")
+    process_btn = st.button("🚀 Gerar Dashboard Detalhado", type="primary")
 
-# Função de Análise usando OpenAI
+# Função de Análise Hiper-Específica
 def analyze_session(text, key):
     client = OpenAI(api_key=key)
     
     prompt = f"""
-    Você é um Sales Enablement Manager especializado em mentorias e vendas B2B/High-Ticket na Ricarreira.
-    Analise a transcrição abaixo com base nos 6 pilares do processo comercial da Ricarreira (Notas de 0 a 10):
-    1. Rapport e Conexão Inicial (criação de vínculo pessoal/contextual)
-    2. Profundidade no Raio-X / Diagnóstico (investigação do 'porquê' das notas baixas)
-    3. Apresentação da Oferta & Entregáveis (clareza no mapa/caminho do aluno sem gerar objeção de excesso de conteúdo)
-    4. Ancoragem de Valor e Prova Social (uso de depoimentos/ROI sem poluição visual)
-    5. Tratamento de Objeções (isolamento de dúvidas e negociação de preço/condições)
-    6. Postura e Linguagem Comercial (firmeza, sem hesitações como 'eu acho')
+    Você é um Sales Enablement Director e Coach Executivo de Vendas B2B/High-Ticket na Ricarreira.
+    Sua tarefa é analisar a transcrição de uma sessão de vendas/mentoria de forma HIPER-ESPECÍFICA e CRÍTICA.
+    PROIBIDO USAR FEEDBACKS GENÉRICOS OU CLICHÊS. Toda crítica ou elogio DEVE obrigatoriamente citar momentos, falas ou fatos ocorridos na chamada.
 
-    Retorne ESTRITAMENTE um objeto JSON válido (sem texto antes ou depois) no formato:
+    Avalie a sessão com base nestes 6 pilares comerciais (Notas de 0 a 10):
+    1. Rapport e Conexão Inicial: Conexão sincera, quebra de gelo usando contexto real (ex: cidade, conexões em comum).
+    2. Profundidade no Raio-X / Diagnóstico: Investigação dos "porquês" por trás das notas baixas dadas pelo lead, fazendo-o verbalizar a dor.
+    3. Estrutura e Pitch da Oferta: Clareza na solução. Vendeu o "Mapa/Caminho" de execução em vez de poluir a tela com excesso de aulas/módulos. Segmentou bônus para o perfil exato (empregado vs desempregado).
+    4. Ancoragem de Valor e Prova Social: Uso de comparações de preço (ex: pós-graduação/MBA vs ROI prático) e exibição de casos reais/depoimentos.
+    5. Tratamento de Objeções e Negociação: Isolamento real de objeções de dinheiro/tempo, postura no fechamento e negociação de entrada/parcelamento sem queimar o valor do produto.
+    6. Postura e Linguagem Comercial: Firmeza, autoridade, ausência de vícios de hesitação ("eu acho", "talvez", "se você quiser").
+
+    Retorne ESTRITAMENTE um objeto JSON válido no formato abaixo:
     {{
-        "nota_geral": 7.8,
+        "nota_geral": 7.5,
         "notas_criterios": {{
-            "Rapport & Conexão": 8.5,
-            "Diagnóstico / Raio-X": 7.5,
-            "Apresentação da Oferta": 6.8,
+            "Rapport & Conexão": 8.0,
+            "Diagnóstico / Raio-X": 7.0,
+            "Estrutura da Oferta": 6.5,
             "Ancoragem & Prova Social": 7.0,
-            "Tratamento de Objeções": 6.5,
-            "Postura & Linguagem": 8.0
+            "Tratamento de Objeções": 6.0,
+            "Postura & Linguagem": 7.5
         }},
         "pontos_fortes": [
-            "Excelente abertura e rapport contextual.",
-            "Boa condução na identificação do canal de entrada do lead."
+            "[Cite um momento específico ou fala exata do vendedor que funcionou muito bem]",
+            "[Cite outra evidência concreta identificada na transcrição]"
         ],
-        "oportunidades_melhoria": [
-            "Aprofundar nos porquês das notas baixas do Raio-X antes de apresentar a solução.",
-            "Na Oferta: Substituir o excesso de detalhes das trilhas pelo 'Mapa de Carreira de 51 dias' para focar na execução prática."
+        "oportunidades_melhoria_oferta": [
+            "Análise detalhada do Pitch da Oferta: O que especificamente faltou ao apresentar os entregáveis, o valor ou o mapa da mentoria?",
+            "Erro/Incoerência técnica detectada: Apontar falha no diagnóstico, ancoragem ou condução da chamada.",
+            "Linguagem e Condução: Ajustes práticos de comunicação do closer."
         ],
-        "plano_de_acao": [
-            "Pitch da Oferta: Conectar cada entregável da oferta diretamente com uma dor dita pelo lead no Raio-X.",
-            "Usar a pergunta de isolamento: 'Fora a questão do investimento, há algo mais que nos impede de começar?'",
-            "Segmentar a entrega de bônus conforme o perfil do cliente (empregado x desempregado)."
+        "plano_de_acao_fechamento": [
+            "Script/Frase exata a ser utilizada na próxima call ao apresentar a oferta.",
+            "Ação prática para o próximo tratamento de objeção de investimento/garantia.",
+            "Ajuste estrutural para a próxima sessão de vendas."
         ]
     }}
 
-    Transcrição para Análise:
+    Transcrição para Análise OBRIGATÓRIA:
     {text}
     """
 
@@ -95,14 +99,14 @@ if process_btn:
     elif not transcript:
         st.warning("Por favor, insira o texto da transcrição.")
     else:
-        with st.spinner("Analisando a sessão e processando as métricas de oferta e vendas..."):
+        with st.spinner("Analisando minutagem e falas da sessão..."):
             try:
                 data = analyze_session(transcript, api_key)
                 
-                st.success("Análise concluída!")
+                st.success("Análise detalhada concluída!")
                 st.divider()
                 
-                # Resumo Geral em Cartões
+                # Resumo
                 col1, col2, col3 = st.columns(3)
                 col1.metric("Score Geral da Chamada", f"{data['nota_geral']} / 10")
                 col2.metric("Lead Analisado", lead_name)
@@ -110,8 +114,8 @@ if process_btn:
                 
                 st.divider()
                 
-                # Gráfico e Notas
-                st.subheader("📈 Desempenho por Pilar Comercial & Oferta")
+                # Gráficos e Notas
+                st.subheader("📈 Avaliação por Pilar Comercial & Oferta")
                 
                 df = pd.DataFrame(
                     list(data["notas_criterios"].items()),
@@ -130,25 +134,25 @@ if process_btn:
                 
                 st.divider()
                 
-                # Feedbacks Qualitativos
+                # Feedbacks Qualitativos Específicos
                 c_fortes, c_melhorias, c_plano = st.columns(3)
                 
                 with c_fortes:
-                    st.subheader("🎯 Pontos Fortes")
+                    st.subheader("🎯 Pontos Fortes (Fatos Reais)")
                     for pf in data["pontos_fortes"]:
                         st.success(f"• {pf}")
                         
                 with c_melhorias:
-                    st.subheader("🚨 Oportunidades (Foco em Oferta)")
-                    for om in data["oportunidades_melhoria"]:
+                    st.subheader("🚨 Diagnóstico Crítico da Oferta")
+                    for om in data["oportunidades_melhoria_oferta"]:
                         st.warning(f"• {om}")
                         
                 with c_plano:
-                    st.subheader("💡 Plano de Ação para Fechamento")
-                    for pa in data["plano_de_acao"]:
+                    st.subheader("💡 Script & Plano de Ação")
+                    for pa in data["plano_de_acao_fechamento"]:
                         st.info(f"• {pa}")
 
             except Exception as e:
                 st.error(f"Erro ao processar análise: {e}")
 else:
-    st.info("👈 Insira os dados na barra lateral e clique em 'Gerar Dashboard de Feedback' para iniciar.")
+    st.info("👈 Insira a API Key e a Transcrição na barra lateral para gerar a análise cirúrgica.")

@@ -46,7 +46,7 @@ with st.sidebar:
     transcript = st.text_area("Cole a Transcrição da Sessão aqui:", height=300)
     process_btn = st.button("🚀 Gerar Análise", type="primary", use_container_width=True)
 
-# Função de Análise com Inteligência do Roteiro Oficial
+# Função de Análise
 def analyze_session(text, key):
     client = OpenAI(api_key=key)
     
@@ -68,6 +68,11 @@ def analyze_session(text, key):
        - Âncora 3 (Ao Vivo): R$ 5.000 (Entrada R$ 500 + 10x R$ 550 ou R$ 4.500 à vista).
        - Cartas de Fechamento: Uso da Garantia Condicional de 51 dias, Combo R$ 500 para Dailys e flexibilização de entrada.
 
+    DIRETRIZES DE CATEGORIZAÇÃO DOS FEEDBACKS:
+    - PONTOS FORTES: Momentos e trechos exatos em que o closer executou com excelência o padrão Ricarreira.
+    - PONTOS DE MELHORIA (🚨 Erros Práticos): Falhas técnicas diretas, erros operacionais e desvios do roteiro executados na chamada que exigem correção imediata (ex: hesitação no fechamento, pulo da nota de 0 a 10, subexplicação da calculadora).
+    - PONTOS DE ATENÇÃO (💡 Alertas & Recomendações): Cuidados preventivos, alertas estratégicos de gestão de tempo, ritmo e tom de voz para evitar objeções nas próximas sessões.
+
     Seja cirúrgico e aprofundado na análise do tempo de permanência e qualidade do discurso. Cite falas e omissões reais do vendedor.
 
     Retorne ESTRITAMENTE um objeto JSON válido no formato:
@@ -85,10 +90,10 @@ def analyze_session(text, key):
             "Trecho ou execução exata alinhada com o roteiro oficial da CRH."
         ],
         "pontos_melhoria": [
-            "Falha técnica ou tempo insuficiente/excessivo em etapas cruciais (ex: acelerou a Calculadora Tempo é Dinheiro, pulou a ancoragem de R$ 8.500, abriu preço antes de pedir nota de 0 a 10)."
+            "Erros práticos, falhas técnicas e desvios diretos do roteiro oficial que ocorreram na chamada e precisam de correção imediata."
         ],
         "pontos_atencao": [
-            "Alertas de condução (ex: tempo investido em cada âncora de preço, uso correto da garantia condicional de 51 dias e hesitações na negociação)."
+            "Alertas preventivos, recomendações de cuidados no tom de voz, ritmo ou gestão de tempo para evitar falhas em chamadas futuras."
         ]
     }}
 
@@ -143,7 +148,7 @@ if process_btn:
                 
                 st.divider()
                 
-                # Seção de Feedbacks Clean
+                # Seção de Feedbacks
                 c_fortes, c_melhoria, c_atencao = st.columns(3)
                 
                 with c_fortes:

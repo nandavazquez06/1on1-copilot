@@ -10,22 +10,19 @@ st.set_page_config(
     layout="wide"
 )
 
-# Estilização Clean (CSS sutil para organizar o layout)
+# Estilização Clean
 st.markdown("""
 <style>
-    /* Remove espaçamentos exagerados no topo */
     .block-container {
         padding-top: 2rem;
         padding-bottom: 2rem;
     }
-    /* Estilo clean para os cards de métricas */
     [data-testid="stMetric"] {
         background-color: #ffffff;
         border: 1px solid #e2e8f0;
         padding: 12px 16px;
         border-radius: 8px;
     }
-    /* Deixa os títulos das caixas mais limpos */
     h3 {
         font-size: 1.1rem !important;
         font-weight: 600 !important;
@@ -34,11 +31,11 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Título Limpo
 st.title("📊 Dashboard de Feedbacks - Sessão 1A1")
+st.caption("Avaliador Inteligente com Base no Roteiro Oficial CRH & Mentoria Henrique Bento")
 st.divider()
 
-# Barra Lateral - Entrada de Dados
+# Barra Lateral
 with st.sidebar:
     st.header("⚙️ Configurações da Chamada")
     api_key = st.text_input("OpenAI API Key", type="password")
@@ -49,42 +46,49 @@ with st.sidebar:
     transcript = st.text_area("Cole a Transcrição da Sessão aqui:", height=300)
     process_btn = st.button("🚀 Gerar Análise", type="primary", use_container_width=True)
 
-# Função de Análise
+# Função de Análise com Inteligência do Roteiro Oficial
 def analyze_session(text, key):
     client = OpenAI(api_key=key)
     
     prompt = f"""
-    Você é um Sales Enablement Director e Coach Executivo de Vendas B2B/High-Ticket na Ricarreira.
-    Analise a transcrição de uma sessão de vendas/mentoria de forma HIPER-ESPECÍFICA e CRÍTICA.
-    PROIBIDO USAR FEEDBACKS GENÉRICOS OU CLICHÊS. Cite momentos e falas exatas da chamada.
+    Você é um Sales Enablement Director e Auditor Comercial de Elite da Ricarreira/CRH.
+    Sua missão é auditar e avaliar minuciosamente uma transcrição de Sessão 1A1 comparando-a estritamente contra o ROTEIRO OFICIAL DE VENDAS DA CRH e o MODELO DE ANÁLISE DO HENRIQUE BENTO.
 
-    Avalie a sessão com base nestes 6 pilares comerciais (Notas de 0 a 10):
-    1. Rapport e Conexão Inicial
-    2. Profundidade no Raio-X / Diagnóstico
-    3. Estrutura e Pitch da Oferta
-    4. Ancoragem de Valor e Prova Social
-    5. Tratamento de Objeções e Negociação
-    6. Postura e Linguagem Comercial
+    ROTEIRO E CHECKLIST TÉCNICO DA CRH PARA AUDITAR:
+    1. Transição & História do Herói Relutante: Validação do gráfico do Raio-X + história da relutância do Ricardo em criar o acompanhamento (apenas 4 vagas/mês).
+    2. Provas Sociais Direcionadas: Apresentação de depoimentos conectando explicitamente a história exibida com a maior dor dita pelo lead no Raio-X, ANTES de detalhar entregáveis.
+    3. Passeio pelos Entregáveis (Pilares + App): Explicação do 'Mapa de Carreira' e funcionalidades do app (Busca ATS, Controle de Vagas, Banco de Currículos Aprovados e Bônus de Onboarding/Aumento).
+    4. Validação da Solução (Nota 0 a 10): Pergunta 'De 0 a 10 o quanto isso te ajuda?' e tratamento direto das objeções caso a resposta seja menor que 10, antes de abrir preço.
+    5. Ancoragem Dupla de Valor: 
+       - Ancoragem Acadêmica: Cálculo estimado de investimentos passados no LinkedIn.
+       - Calculadora 'Tempo é Dinheiro': Cálculo ostensivo da perda financeira por dia e por semana parado.
+    6. Escada de Oferta e Negociação:
+       - Âncora 1 (Cheio): 12x R$ 997 (Entrada R$ 500 + 12x R$ 955 ou R$ 9.500 à vista).
+       - Âncora 2 (Urgência 23h59): R$ 8.500 (Entrada R$ 500 + 10x R$ 800 ou R$ 6.500 à vista).
+       - Âncora 3 (Ao Vivo): R$ 5.000 (Entrada R$ 500 + 10x R$ 550 ou R$ 4.500 à vista).
+       - Cartas de Fechamento: Uso da Garantia Condicional de 51 dias, Combo R$ 500 para Dailys e flexibilização de entrada.
+
+    Seja cirúrgico e aprofundado na análise do tempo de permanência e qualidade do discurso. Cite falas e omissões reais do vendedor.
 
     Retorne ESTRITAMENTE um objeto JSON válido no formato:
     {{
         "nota_geral": 7.5,
         "notas_criterios": {{
-            "Rapport & Conexão": 8.0,
-            "Diagnóstico / Raio-X": 7.0,
-            "Estrutura da Oferta": 6.5,
-            "Ancoragem & Prova Social": 7.0,
-            "Tratamento de Objeções": 6.0,
-            "Postura & Linguagem": 7.5
+            "Herói Relutante & Conexão": 8.0,
+            "Provas e Depoimentos": 7.0,
+            "Apresentação de Entregáveis": 8.5,
+            "Ancoragem (Acadêmica + Calculadora)": 6.5,
+            "Escada de Preços & Negociação": 6.0,
+            "Linguagem & Fechamento": 7.5
         }},
         "pontos_fortes": [
-            "Citação ou momento exato em que o closer se destacou positivamente."
+            "Trecho ou execução exata alinhada com o roteiro oficial da CRH."
         ],
         "pontos_melhoria": [
-            "Falha prática ou técnica específica identificada no diagnóstico, oferta ou fechamento."
+            "Falha técnica ou tempo insuficiente/excessivo em etapas cruciais (ex: acelerou a Calculadora Tempo é Dinheiro, pulou a ancoragem de R$ 8.500, abriu preço antes de pedir nota de 0 a 10)."
         ],
         "pontos_atencao": [
-            "Alertas estratégicos, riscos de objeção não tratada ou comportamentos a monitorar."
+            "Alertas de condução (ex: tempo investido em cada âncora de preço, uso correto da garantia condicional de 51 dias e hesitações na negociação)."
         ]
     }}
 
@@ -107,11 +111,11 @@ if process_btn:
     elif not transcript:
         st.warning("Por favor, insira o texto da transcrição.")
     else:
-        with st.spinner("Analisando a sessão..."):
+        with st.spinner("Auditando a sessão contra o Roteiro Oficial CRH e Mentoria Henrique Bento..."):
             try:
                 data = analyze_session(transcript, api_key)
                 
-                # Resumo em Cartões Limpos
+                # Resumo
                 col1, col2, col3 = st.columns(3)
                 col1.metric("Score Geral", f"{data['nota_geral']} / 10")
                 col2.metric("Lead Analisado", lead_name)
@@ -120,7 +124,7 @@ if process_btn:
                 st.divider()
                 
                 # Gráfico e Métricas
-                st.subheader("📈 Desempenho por Pilar Comercial")
+                st.subheader("📈 Desempenho por Pilar do Roteiro Oficial CRH")
                 
                 df = pd.DataFrame(
                     list(data["notas_criterios"].items()),
@@ -139,7 +143,7 @@ if process_btn:
                 
                 st.divider()
                 
-                # Seção Clean de Feedbacks em 3 Colunas
+                # Seção de Feedbacks Clean
                 c_fortes, c_melhoria, c_atencao = st.columns(3)
                 
                 with c_fortes:

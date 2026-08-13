@@ -5,12 +5,12 @@ from openai import OpenAI
 
 # Configuração da página
 st.set_page_config(
-    page_title="Dashboard 1A1 - Ricarreira",
+    page_title="Showcase IA - Dashboard 1A1 Ricarreira",
     page_icon="📊",
     layout="wide"
 )
 
-# Estilização Clean
+# Estilização Clean & Premium
 st.markdown("""
 <style>
     .block-container {
@@ -23,6 +23,16 @@ st.markdown("""
         padding: 12px 16px;
         border-radius: 8px;
     }
+    .status-badge {
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-weight: bold;
+        display: inline-block;
+        margin-bottom: 15px;
+    }
+    .badge-gold { background-color: #d1fae5; color: #065f46; border: 1px solid #34d399; }
+    .badge-warning { background-color: #fef3c7; color: #92400e; border: 1px solid #fbbf24; }
+    .badge-danger { background-color: #fee2e2; color: #991b1b; border: 1px solid #f87171; }
     h3 {
         font-size: 1.1rem !important;
         font-weight: 600 !important;
@@ -32,21 +42,43 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.title("📊 Dashboard de Feedbacks - Sessão 1A1")
-st.caption("Avaliador Inteligente com Base no Roteiro Oficial CRH & Mentoria Henrique Bento")
+st.caption("Avaliador Inteligente com Base no Roteiro Oficial CRH & Mentoria Henrique Bento / Claudio Tonon")
 st.divider()
 
-# Barra Lateral
+# Transcrição de Exemplo para o Showcase Ao Vivo
+DEMO_TRANSCRIPT = """
+Closer: Olá Mariana, tudo bem? Vamos analisar seu Raio-X. Vi aqui que no LinkedIn você deu nota 4 e em Entrevistas nota 5. Me conta o porquê dessa nota tão baixa no LinkedIn?
+Lead: Ah, eu envio muitos currículos mas ninguém me chama no LinkedIn, me sinto invisível.
+Closer: Entendi... E se a gente puder mudar esse cenário hoje? Quero te mostrar nosso programa de acompanhamento da CRH. Deixa eu te contar uma história: o Ricardo por muito tempo relutou em criar um programa individual porque achava que tomaria muito tempo... Mas ele viu que ter acompanhamento muda o jogo.
+(Apresentação dos depoimentos e dos entregáveis do App CRH)
+Closer: De 0 a 10, o quanto você acha que tudo isso que te apresentei vai te ajudar a resolver sua maior dificuldade?
+Lead: Nota 9! Gostei muito, mas preciso ver a questão financeira.
+Closer: Maravilha! Vi aqui no seu LinkedIn suas formações e estimamos cerca de R$ 30.000 investidos em pós e cursos sem acompanhamento. E na calculadora, sua pretensão de R$ 8.000 significa que cada semana parada você perde R$ 2.000.
+(Apresentação das Ofertas)
+Closer: Nosso investimento normal é 12x de R$ 997. Mas fechando até às 23h59 hoje temos a condição especial de R$ 8.500 com entrada de R$ 500 e mais 10x de R$ 800. E para quem fecha agora ao vivo na chamada, fica por R$ 5.000 (R$ 500 entrada + 10x R$ 550) com a Garantia Condicional de 51 dias!
+"""
+
+# Barra Lateral - Entrada de Dados
 with st.sidebar:
     st.header("⚙️ Configurações da Chamada")
-    api_key = st.text_input("OpenAI API Key", type="password")
+    api_key = st.text_input("OpenAI API Key", type="password", help="Insira sua chave sk-...")
     
-    lead_name = st.text_input("Nome do Lead", value="Mariana Mansur")
-    closers = st.text_input("Avaliados / Closers", value="Fernanda Vazquez & Ricardo Batista")
+    st.markdown("---")
+    st.subheader("⚡ Modo Apresentação Ao Vivo")
+    use_demo = st.checkbox("Carregar Transcrição de Exemplo", value=False)
     
-    transcript = st.text_area("Cole a Transcrição da Sessão aqui:", height=300)
-    process_btn = st.button("🚀 Gerar Análise", type="primary", use_container_width=True)
+    if use_demo:
+        lead_name = "Mariana Mansur (Exemplo Showcase)"
+        closers = "Fernanda Vazquez & Ricardo Batista"
+        transcript = st.text_area("Transcrição da Sessão:", value=DEMO_TRANSCRIPT, height=220)
+    else:
+        lead_name = st.text_input("Nome do Lead", value="Mariana Mansur")
+        closers = st.text_input("Avaliados / Closers", value="Fernanda Vazquez & Ricardo Batista")
+        transcript = st.text_area("Cole a Transcrição da Sessão aqui:", height=250)
+        
+    process_btn = st.button("🚀 Gerar Análise de Performance", type="primary", use_container_width=True)
 
-# Função de Análise
+# Função de Análise com Inteligência de Auditoria CRH
 def analyze_session(text, key):
     client = OpenAI(api_key=key)
     
@@ -78,6 +110,7 @@ def analyze_session(text, key):
     Retorne ESTRITAMENTE um objeto JSON válido no formato:
     {{
         "nota_geral": 7.5,
+        "status_chancela": "Aprovado com Ressalvas",
         "notas_criterios": {{
             "Herói Relutante & Conexão": 8.0,
             "Provas e Depoimentos": 7.0,
@@ -120,7 +153,21 @@ if process_btn:
             try:
                 data = analyze_session(transcript, api_key)
                 
-                # Resumo
+                # Cabeçalho Principal e Status
+                st.subheader(f"Avaliação da Reunião - Lead: {lead_name}")
+                
+                # Lógica da Badge Visual
+                score = data['nota_geral']
+                if score >= 8.5:
+                    badge_html = '<div class="status-badge badge-gold">🏆 Padrão Ouro Ricarreira</div>'
+                elif score >= 6.5:
+                    badge_html = '<div class="status-badge badge-warning">⚠️ Aprovado com Ressalvas</div>'
+                else:
+                    badge_html = '<div class="status-badge badge-danger">🚨 Necessita Reciclagem</div>'
+                
+                st.markdown(badge_html, unsafe_allow_html=True)
+                
+                # Resumo em Métricas
                 col1, col2, col3 = st.columns(3)
                 col1.metric("Score Geral", f"{data['nota_geral']} / 10")
                 col2.metric("Lead Analisado", lead_name)
@@ -142,13 +189,13 @@ if process_btn:
                     st.bar_chart(df.set_index("Critério"))
                     
                 with c_details:
-                    for crit, score in data["notas_criterios"].items():
-                        st.write(f"**{crit}:** {score}/10")
-                        st.progress(score / 10.0)
+                    for crit, score_val in data["notas_criterios"].items():
+                        st.write(f"**{crit}:** {score_val}/10")
+                        st.progress(score_val / 10.0)
                 
                 st.divider()
                 
-                # Seção de Feedbacks
+                # Seção de Feedbacks Organizada
                 c_fortes, c_melhoria, c_atencao = st.columns(3)
                 
                 with c_fortes:
@@ -165,8 +212,33 @@ if process_btn:
                     st.subheader("💡 Pontos de Atenção")
                     for pa in data["pontos_atencao"]:
                         st.info(f"• {pa}")
+                
+                st.divider()
+                
+                # Recurso de Exportação (Download)
+                st.subheader("📄 Exportar Feedback para o Closer")
+                report_text = f"""=== RELATÓRIO DE FEEDBACK 1A1 - RICARREIRA ===
+Lead: {lead_name}
+Closers: {closers}
+Score Geral: {data['nota_geral']} / 10
+
+PONTOS FORTES:
+" + "\n".join([f"- {item}" for item in data['pontos_fortes']]) + "
+
+PONTOS DE MELHORIA:
+" + "\n".join([f"- {item}" for item in data['pontos_melhoria']]) + "
+
+PONTOS DE ATENÇÃO:
+" + "\n".join([f"- {item}" for item in data['pontos_atencao']]) + "
+"""
+                st.download_button(
+                    label="📥 Baixar Feedback em Arquivo de Texto",
+                    data=report_text,
+                    file_name=f"Feedback_1A1_{lead_name.replace(' ', '_')}.txt",
+                    mime="text/plain"
+                )
 
             except Exception as e:
                 st.error(f"Erro ao processar análise: {e}")
 else:
-    st.info("👈 Insira a API Key e a Transcrição na barra lateral para carregar a análise.")
+    st.info("👈 Insira a API Key e a Transcrição (ou marque a opção 'Carregar Transcrição de Exemplo') na barra lateral para iniciar.")

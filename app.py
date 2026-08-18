@@ -1,16 +1,25 @@
 import streamlit as st
 import pandas as pd
 import json
+from datetime import datetime, timedelta
 from openai import OpenAI
+
+# Tentar importar bibliotecas do Google Cloud
+try:
+    from google.oauth2 import service_account
+    from googleapiclient.discovery import build
+    GOOGLE_API_AVAILABLE = True
+except ImportError:
+    GOOGLE_API_AVAILABLE = False
 
 # Configuração da página
 st.set_page_config(
-    page_title="Showcase IA - Dashboard 1A1 Ricarreira",
+    page_title="Dashboard 1A1 - Ricarreira",
     page_icon="📊",
     layout="wide"
 )
 
-# Estilização Clean & Premium
+# Estilização Clean
 st.markdown("""
 <style>
     .block-container {
@@ -23,16 +32,6 @@ st.markdown("""
         padding: 12px 16px;
         border-radius: 8px;
     }
-    .status-badge {
-        padding: 8px 16px;
-        border-radius: 20px;
-        font-weight: bold;
-        display: inline-block;
-        margin-bottom: 15px;
-    }
-    .badge-gold { background-color: #d1fae5; color: #065f46; border: 1px solid #34d399; }
-    .badge-warning { background-color: #fef3c7; color: #92400e; border: 1px solid #fbbf24; }
-    .badge-danger { background-color: #fee2e2; color: #991b1b; border: 1px solid #f87171; }
     h3 {
         font-size: 1.1rem !important;
         font-weight: 600 !important;
@@ -45,7 +44,7 @@ st.title("📊 Dashboard de Feedbacks - Sessão 1A1")
 st.caption("Avaliador Inteligente com Base no Roteiro Oficial CRH & Mentoria Henrique Bento / Claudio Tonon")
 st.divider()
 
-# Transcrição de Exemplo para o Showcase Ao Vivo
+# Transcrição de Exemplo para Showcase / Teste
 DEMO_TRANSCRIPT = """
 Closer: Olá Mariana, tudo bem? Vamos analisar seu Raio-X. Vi aqui que no LinkedIn você deu nota 4 e em Entrevistas nota 5. Me conta o porquê dessa nota tão baixa no LinkedIn?
 Lead: Ah, eu envio muitos currículos mas ninguém me chama no LinkedIn, me sinto invisível.
@@ -58,27 +57,146 @@ Closer: Maravilha! Vi aqui no seu LinkedIn suas formações e estimamos cerca de
 Closer: Nosso investimento normal é 12x de R$ 997. Mas fechando até às 23h59 hoje temos a condição especial de R$ 8.500 com entrada de R$ 500 e mais 10x de R$ 800. E para quem fecha agora ao vivo na chamada, fica por R$ 5.000 (R$ 500 entrada + 10x R$ 550) com a Garantia Condicional de 51 dias!
 """
 
-# Barra Lateral - Entrada de Dados
+# Reuniões de Exemplo (Simulador)
+MOCK_EVENTS = [
+    {
+        "title": "Sessão 1A1 - Mariana Mansur (CRH)",
+        "time": "Hoje às 14:00",
+        "lead": "Mariana Mansur",
+        "closers": "Fernanda Vazquez & Ricardo Batista",
+        "transcript": DEMO_TRANSCRIPT
+    },
+    {
+        "title": "Sessão 1A1 - Carlos Eduardo (Diagnóstico Raio-X)",
+        "time": "Hoje às 16:30",
+        "lead": "Carlos Eduardo",
+        "closers": "Fernanda Vazquez",
+        "transcript": "Closer: Olá Carlos, vi no seu Raio-X nota 3 em entrevistas. O que tem travado lá?\nLead: Eu fico muito nervoso ao responder perguntas sobre histórias de conquistas passadas..."
+    }
+]
+
+# Função para buscar reuniões reais do Google Calendar
+def fetch_google_calendar_events(calendar_id):
+    if not GOOGLE_API_AVAILABLE:
+        return None, "As bibliotecas 'google-api-python-client' e 'google-auth' precisam estar no arquivo requirements.txt."
+    
+    if "google_credentials" not in st.secrets:
+        return None, "Chave 'google_credentials' não encontrada nas Secrets do Streamlit."
+    
+    try:
+        creds_raw = st.secrets["google_credentials"]
+        if isinstance(creds_raw, str):
+            creds_dict = json.loads(creds_raw)
+        else:
+            creds_dict = dict(creds_raw)
+            
+        SCOPES = ['https://www.googleapis.com/auth/calendar.readonly']
+        credentials = service_account.Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
+        service = build('calendar', 'v3', credentials=credentials)
+        
+        now = datetime.utcnow().isoformat() + 'Z'
+        events_result = service.events().list(
+            calendarId=calendar_id,
+            timeMin=now,
+            maxResults=10,
+            singleEvents=True,
+            orderBy='startTime'
+        ).execute()
+        
+        events = events_result.get('items', [])
+        return events, None
+    except Exception as e:
+        return None, str(e)
+
+# Session States
+if "lead_name" not in st.session_state:
+    st.session_state["lead_name"] = "Mariana Mansur"
+if "closers" not in st.session_state:
+    st.session_state["closers"] = "Fernanda Vazquez & Ricardo Batista"
+if "transcript" not in st.session_state:
+    st.session_state["transcript"] = ""
+
+# Barra Lateral
 with st.sidebar:
-    st.header("⚙️ Configurações da Chamada")
-    api_key = st.text_input("OpenAI API Key", type="password", help="Insira sua chave sk-...")
+    st.header("⚙️ Configurações & Conexões")
+    api_key = st.text_input("OpenAI API Key", type="password")
     
     st.markdown("---")
-    st.subheader("⚡ Modo Apresentação Ao Vivo")
-    use_demo = st.checkbox("Carregar Transcrição de Exemplo", value=False)
+    st.subheader("📅 Origem dos Dados")
     
-    if use_demo:
-        lead_name = "Mariana Mansur (Exemplo Showcase)"
-        closers = "Fernanda Vazquez & Ricardo Batista"
-        transcript = st.text_area("Transcrição da Sessão:", value=DEMO_TRANSCRIPT, height=220)
-    else:
-        lead_name = st.text_input("Nome do Lead", value="Mariana Mansur")
-        closers = st.text_input("Avaliados / Closers", value="Fernanda Vazquez & Ricardo Batista")
-        transcript = st.text_area("Cole a Transcrição da Sessão aqui:", height=250)
-        
+    data_source = st.radio(
+        "Selecione a Fonte das Sessões:",
+        ["⚡ Modo Apresentação / Simulador", "📅 Agenda do Google (API Real)"]
+    )
+    
+    if data_source == "📅 Agenda do Google (API Real)":
+        calendar_email = st.text_input(
+            "E-mail da Agenda da Equipe:", 
+            value="equipe@ricarreira.com", 
+            help="Coloque o e-mail da conta do Google Calendar onde ficam agendadas as reuniões 1A1."
+        )
+        if st.button("🔄 Buscar Sessões na Agenda Real"):
+            with st.spinner("Conectando à Agenda do Google..."):
+                events, err = fetch_google_calendar_events(calendar_email)
+                if err:
+                    st.error(f"Erro na conexão: {err}")
+                    st.info("💡 Dica: Verifique se a agenda deste e-mail foi compartilhada com a Conta de Serviço (o e-mail do robô em `client_email`).")
+                elif not events:
+                    st.warning("Nenhuma reunião futura encontrada na agenda informada.")
+                else:
+                    st.session_state["real_events"] = events
+                    st.success(f"{len(events)} reuniões encontradas!")
+
+    st.markdown("---")
+    
+    # Preenchimento de exemplo rápido
+    if st.checkbox("Carregar Transcrição de Exemplo"):
+        st.session_state["transcript"] = DEMO_TRANSCRIPT
+        st.session_state["lead_name"] = "Mariana Mansur"
+        st.session_state["closers"] = "Fernanda Vazquez & Ricardo Batista"
+
+    lead_name = st.text_input("Nome do Lead", value=st.session_state["lead_name"])
+    closers = st.text_input("Avaliados / Closers", value=st.session_state["closers"])
+    transcript = st.text_area("Cole a Transcrição da Sessão aqui:", value=st.session_state["transcript"], height=250)
+    
     process_btn = st.button("🚀 Gerar Análise de Performance", type="primary", use_container_width=True)
 
-# Função de Análise com Inteligência de Auditoria CRH
+# Painel Central do Simulador/Google Calendar
+if data_source == "⚡ Modo Apresentação / Simulador":
+    st.subheader("📅 Sessões Agendadas na Agenda (Simulação Showcase)")
+    st.caption("Selecione uma reunião sincronizada para importar automaticamente os dados:")
+    
+    col_sel, col_btn = st.columns([3, 1])
+    with col_sel:
+        selected_title = st.selectbox("Escolha a sessão:", [f"{e['time']} - {e['title']}" for e in MOCK_EVENTS])
+    with col_btn:
+        st.write("")
+        if st.button("📥 Importar Dados"):
+            selected_evt = next(e for e in MOCK_EVENTS if e['title'] in selected_title)
+            st.session_state["lead_name"] = selected_evt["lead"]
+            st.session_state["closers"] = selected_evt["closers"]
+            st.session_state["transcript"] = selected_evt["transcript"]
+            st.success(f"Dados de {selected_evt['lead']} importados!")
+            st.rerun()
+
+elif data_source == "📅 Agenda do Google (API Real)" and "real_events" in st.session_state:
+    st.subheader("📅 Sessões Encontradas na Agenda Oficial da Equipe")
+    real_events = st.session_state["real_events"]
+    
+    event_options = [f"{e.get('start', {}).get('dateTime', 'Horário N/A')} - {e.get('summary', 'Sem título')}" for e in real_events]
+    selected_real_evt_title = st.selectbox("Selecione a reunião da agenda:", event_options)
+    
+    if st.button("📥 Importar Dados do Evento Selecionado"):
+        idx = event_options.index(selected_real_evt_title)
+        evt_data = real_events[idx]
+        st.session_state["lead_name"] = evt_data.get("summary", "Lead").replace("Sessão 1A1 - ", "")
+        st.session_state["transcript"] = evt_data.get("description", "Cole aqui a transcrição do Google Meet...")
+        st.success("Dados da reunião importados da Agenda do Google!")
+        st.rerun()
+
+st.divider()
+
+# Função de Análise GPT-4o
 def analyze_session(text, key):
     client = OpenAI(api_key=key)
     
@@ -110,7 +228,6 @@ def analyze_session(text, key):
     Retorne ESTRITAMENTE um objeto JSON válido no formato:
     {{
         "nota_geral": 7.5,
-        "status_chancela": "Aprovado com Ressalvas",
         "notas_criterios": {{
             "Herói Relutante & Conexão": 8.0,
             "Provas e Depoimentos": 7.0,
@@ -142,7 +259,7 @@ def analyze_session(text, key):
     
     return json.loads(response.choices[0].message.content)
 
-# Renderização do Dashboard
+# Renderização dos Resultados
 if process_btn:
     if not api_key:
         st.error("Por favor, informe a sua OpenAI API Key na barra lateral.")
@@ -153,21 +270,7 @@ if process_btn:
             try:
                 data = analyze_session(transcript, api_key)
                 
-                # Cabeçalho Principal e Status
-                st.subheader(f"Avaliação da Reunião - Lead: {lead_name}")
-                
-                # Lógica da Badge Visual
-                score = data['nota_geral']
-                if score >= 8.5:
-                    badge_html = '<div class="status-badge badge-gold">🏆 Padrão Ouro Ricarreira</div>'
-                elif score >= 6.5:
-                    badge_html = '<div class="status-badge badge-warning">⚠️ Aprovado com Ressalvas</div>'
-                else:
-                    badge_html = '<div class="status-badge badge-danger">🚨 Necessita Reciclagem</div>'
-                
-                st.markdown(badge_html, unsafe_allow_html=True)
-                
-                # Resumo em Métricas
+                # Resumo e Métricas
                 col1, col2, col3 = st.columns(3)
                 col1.metric("Score Geral", f"{data['nota_geral']} / 10")
                 col2.metric("Lead Analisado", lead_name)
@@ -175,7 +278,7 @@ if process_btn:
                 
                 st.divider()
                 
-                # Gráfico e Métricas
+                # Gráfico
                 st.subheader("📈 Desempenho por Pilar do Roteiro Oficial CRH")
                 
                 df = pd.DataFrame(
@@ -184,18 +287,16 @@ if process_btn:
                 )
                 
                 c_chart, c_details = st.columns([2, 1])
-                
                 with c_chart:
                     st.bar_chart(df.set_index("Critério"))
-                    
                 with c_details:
-                    for crit, score_val in data["notas_criterios"].items():
-                        st.write(f"**{crit}:** {score_val}/10")
-                        st.progress(score_val / 10.0)
+                    for crit, score in data["notas_criterios"].items():
+                        st.write(f"**{crit}:** {score}/10")
+                        st.progress(score / 10.0)
                 
                 st.divider()
                 
-                # Seção de Feedbacks Organizada
+                # Feedbacks Organizados
                 c_fortes, c_melhoria, c_atencao = st.columns(3)
                 
                 with c_fortes:
@@ -215,21 +316,20 @@ if process_btn:
                 
                 st.divider()
                 
-                # Recurso de Exportação (Download)
-                st.subheader("📄 Exportar Feedback para o Closer")
+                # Exportar Relatório
                 report_text = f"""=== RELATÓRIO DE FEEDBACK 1A1 - RICARREIRA ===
 Lead: {lead_name}
 Closers: {closers}
 Score Geral: {data['nota_geral']} / 10
 
 PONTOS FORTES:
-" + "\n".join([f"- {item}" for item in data['pontos_fortes']]) + "
+""" + "\n".join([f"- {item}" for item in data['pontos_fortes']]) + """
 
 PONTOS DE MELHORIA:
-" + "\n".join([f"- {item}" for item in data['pontos_melhoria']]) + "
+""" + "\n".join([f"- {item}" for item in data['pontos_melhoria']]) + """
 
 PONTOS DE ATENÇÃO:
-" + "\n".join([f"- {item}" for item in data['pontos_atencao']]) + "
+""" + "\n".join([f"- {item}" for item in data['pontos_atencao']]) + """
 """
                 st.download_button(
                     label="📥 Baixar Feedback em Arquivo de Texto",
@@ -241,4 +341,12 @@ PONTOS DE ATENÇÃO:
             except Exception as e:
                 st.error(f"Erro ao processar análise: {e}")
 else:
-    st.info("👈 Insira a API Key e a Transcrição (ou marque a opção 'Carregar Transcrição de Exemplo') na barra lateral para iniciar.")
+    st.info("👈 Selecione uma opção na barra lateral e insira a API Key para carregar a análise.")
+```
+
+### O que muda agora no seu app:
+1. Apareceu na barra lateral a seção **"📅 Origem dos Dados"**.
+2. Você pode escolher entre **⚡ Modo Apresentação / Simulador** (para testar sem precisar da agenda na hora) e **📅 Agenda do Google (API Real)**.
+3. No modo real, você digita o e-mail da equipe, clica em **Buscar Sessões** e o app consulta a API do Google usando a chave que você salvou em Secrets!
+
+Substitua esse código no arquivo `app.py` do GitHub e clique em **Commit changes**. O app vai carregar a nova interface em instantes!

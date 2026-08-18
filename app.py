@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import json
-from datetime import datetime, timedelta
+from datetime import datetime
 from openai import OpenAI
 
 # Tentar importar bibliotecas do Google Cloud
@@ -78,7 +78,7 @@ MOCK_EVENTS = [
 # Função para buscar reuniões reais do Google Calendar
 def fetch_google_calendar_events(calendar_id):
     if not GOOGLE_API_AVAILABLE:
-        return None, "As bibliotecas 'google-api-python-client' e 'google-auth' precisam estar no arquivo requirements.txt."
+        return None, "As bibliotecas 'google-api-python-client' e 'google-auth' precisam estar instaladas no Streamlit."
     
     if "google_credentials" not in st.secrets:
         return None, "Chave 'google_credentials' não encontrada nas Secrets do Streamlit."
@@ -126,10 +126,10 @@ with st.sidebar:
     
     data_source = st.radio(
         "Selecione a Fonte das Sessões:",
-        ["⚡ Modo Apresentação / Simulador", "📅 Agenda do Google (API Real)"]
+        ["Modo Apresentação / Simulador", "Agenda do Google (API Real)"]
     )
     
-    if data_source == "📅 Agenda do Google (API Real)":
+    if data_source == "Agenda do Google (API Real)":
         calendar_email = st.text_input(
             "E-mail da Agenda da Equipe:", 
             value="equipe@ricarreira.com", 
@@ -140,7 +140,7 @@ with st.sidebar:
                 events, err = fetch_google_calendar_events(calendar_email)
                 if err:
                     st.error(f"Erro na conexão: {err}")
-                    st.info("💡 Dica: Verifique se a agenda deste e-mail foi compartilhada com a Conta de Serviço (o e-mail do robô em `client_email`).")
+                    st.info("💡 Dica: Verifique se a agenda deste e-mail foi compartilhada com o e-mail da Conta de Serviço do Google Cloud.")
                 elif not events:
                     st.warning("Nenhuma reunião futura encontrada na agenda informada.")
                 else:
@@ -162,7 +162,7 @@ with st.sidebar:
     process_btn = st.button("🚀 Gerar Análise de Performance", type="primary", use_container_width=True)
 
 # Painel Central do Simulador/Google Calendar
-if data_source == "⚡ Modo Apresentação / Simulador":
+if data_source == "Modo Apresentação / Simulador":
     st.subheader("📅 Sessões Agendadas na Agenda (Simulação Showcase)")
     st.caption("Selecione uma reunião sincronizada para importar automaticamente os dados:")
     
@@ -179,7 +179,7 @@ if data_source == "⚡ Modo Apresentação / Simulador":
             st.success(f"Dados de {selected_evt['lead']} importados!")
             st.rerun()
 
-elif data_source == "📅 Agenda do Google (API Real)" and "real_events" in st.session_state:
+elif data_source == "Agenda do Google (API Real)" and "real_events" in st.session_state:
     st.subheader("📅 Sessões Encontradas na Agenda Oficial da Equipe")
     real_events = st.session_state["real_events"]
     
@@ -343,10 +343,3 @@ PONTOS DE ATENÇÃO:
 else:
     st.info("👈 Selecione uma opção na barra lateral e insira a API Key para carregar a análise.")
 ```
-
-### O que muda agora no seu app:
-1. Apareceu na barra lateral a seção **"📅 Origem dos Dados"**.
-2. Você pode escolher entre **⚡ Modo Apresentação / Simulador** (para testar sem precisar da agenda na hora) e **📅 Agenda do Google (API Real)**.
-3. No modo real, você digita o e-mail da equipe, clica em **Buscar Sessões** e o app consulta a API do Google usando a chave que você salvou em Secrets!
-
-Substitua esse código no arquivo `app.py` do GitHub e clique em **Commit changes**. O app vai carregar a nova interface em instantes!

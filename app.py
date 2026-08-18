@@ -342,4 +342,3 @@ PONTOS DE ATENÇÃO:
                 st.error(f"Erro ao processar análise: {e}")
 else:
     st.info("👈 Selecione uma opção na barra lateral e insira a API Key para carregar a análise.")
-```

@@ -2,9 +2,9 @@ import streamlit as st
 import datetime
 import json
 
-st.set_page_config(page_title="Dashboard de Feedbacks - Sessão 1A1", page_icon="📊", layout="wide")
-st.title("📊 Dashboard de Feedbacks - Sessão 1A1")
-st.caption("Avaliador Inteligente com Base no Roteiro Oficial CRH & Mentoria Henrique Bento / Claudio Tonon")
+st.set_page_config(page_title="Dashboard de Feedbacks Ricarreira - Sessão 1A1", page_icon="📊", layout="wide")
+st.title("📊 Dashboard de Feedbacks - Sessão 1A1 (Ricarreira)")
+st.caption("Avaliador Inteligente de Chamadas High Ticket | Metodologia FHT (Formula High Ticket)")
 
 # Sidebar - Configurações e Fonte de Dados
 st.sidebar.header("⚙️ Configurações da Chamada")
@@ -28,12 +28,12 @@ if fonte_dados == "Modo Apresentação / Simulador":
         nome_lead = "Mariana Mansur"
         closers_nomes = "Fernanda Vazquez & Ricardo Batista"
         transcricao_texto = """[00:05] Closer: Olá Mariana, tudo bem? Seja bem-vinda à nossa sessão 1A1 da Ricarreira.
-[00:15] Lead: Olá! Tudo ótimo.
+[00:15] Lead: Olá! Tudo ótimo, assisti a imersão do Ricardo e o conteúdo do YouTube da Ricarreira e já queria tirar dúvidas sobre o CRH.
 [00:30] Closer: Excelente. Hoje vamos analisar o seu momento atual de carreira, entender sua ancoragem acadêmica no LinkedIn e ver exatamente quanto tempo e dinheiro você está deixando na mesa com a nossa calculadora 'Tempo é Dinheiro'.
-[02:00] Closer: Analisando seu perfil, vejo que você tem uma bagagem incrível, mas seu posicionamento acadêmico e LinkedIn ainda não refletem seu valor sênior...
-[05:00] Closer: Apresentando a nossa proposta: A Âncora 1 é de 12x de R$ 997 ou R$ 9.500 à vista. Comprando hoje na nossa condição de urgência, fica por R$ 8.500 à vista ou R$ 5.000 no plano especial ao vivo.
-[10:00] Lead: Gostei bastante da proposta e do roteiro do Herói Relutante!
-[12:00] Closer: Perfeito! Temos nossa garantia condicional de 51 dias para você aplicar o método sem risco."""
+[02:00] Closer: Analisando seu perfil, vejo que você tem uma bagagem incrível...
+[05:00] Closer: Apresentando a nossa proposta para o programa CRH: A Âncora 1 é de 12x de R$ 997 ou R$ 9.500 à vista. Comprando hoje na nossa condição de urgência, fica por R$ 8.500 à vista ou R$ 5.000 no plano especial ao vivo.
+[10:00] Lead: Perfeito! Vou passar o cartão agora para garantir minha vaga no CRH!
+[12:00] Closer: Excelente! Seja muito bem-vinda ao programa CRH da Ricarreira!"""
     
     nome_lead = st.sidebar.text_input("Nome do Lead", value=nome_lead)
     closers_nomes = st.sidebar.text_input("Avaliados / Closers", value=closers_nomes)
@@ -101,7 +101,6 @@ else:
         nome_lead = evento_obj.get('summary', 'Sessão 1A1')
         descricao_evento = evento_obj.get("description", "")
         
-        # Pega a transcrição da descrição do evento ou observações
         transcricao_texto = descricao_evento if descricao_evento.strip() else f"Sessão: {nome_lead}\nData: {evento_obj.get('start', {}).get('dateTime', '')}\nParticipantes: {', '.join([p.get('email', '') for p in evento_obj.get('attendees', [])])}"
         
         st.sidebar.write("---")
@@ -118,34 +117,50 @@ if transcricao_texto:
         if not openai_key:
             st.error("🔑 Por favor, insira sua OpenAI API Key na barra lateral para gerar o diagnóstico com IA.")
         else:
-            with st.spinner("🤖 Analisando a reunião com base no Roteiro Oficial CRH & Mentoria Bento/Tonon..."):
+            with st.spinner("🤖 Analisando a reunião da Ricarreira com base na metodologia FHT..."):
                 try:
                     from openai import OpenAI
                     client = OpenAI(api_key=openai_key)
                     
-                    prompt_sistema = """Você é um especialista e auditor sênior de chamadas de vendas do método CRH (Mentoria Henrique Bento e Claudio Tonon).
-Sua tarefa é analisar rigorosamente a transcrição/detalhes da sessão 1A1 fornecida.
+                    prompt_sistema = """Você é um auditor sênior de chamadas High Ticket da Ricarreira (programa CRH, fundado pelo especialista Ricardo).
+Sua missão é auditar o desempenho do closer na sessão 1A1, utilizando a metodologia FHT (Formula High Ticket).
 
-Avalie detalhadamente os seguintes pilares do Roteiro CRH:
-1. Conexão Inicial e Diagnóstico de Carreira
-2. Ancoragem Acadêmica & LinkedIn
-3. Uso da Calculadora "Tempo é Dinheiro"
-4. Apresentação do Preço e Ancoragem Dupla (Âncora 1: 12x R$ 997 / R$ 9.500 à vista -> Condição Urgência: R$ 8.500 à vista ou R$ 5.000 ao vivo)
-5. Utilização de Depoimentos / Herói Relutante e Garantia Condicional de 51 dias
-6. Pitch de Fechamento e Contorno de Objeções
+REGRAS RÍGIDAS DE NOTA & CONVERSÃO:
+1. IDENTIFICAÇÃO DE CONVERSÃO:
+   - Se a transcrição/descrição indicar que o LEAD COMPROU / CONVERTEU (ex: passou cartão, enviou PIX, aceitou a proposta ou disse 'vou fechar/comprar'), a nota final OBRIGATORIAMENTE DEVE SER ENTRE 8.0 E 10.0.
+   - O primeiro item da sua resposta DEVE SER O STATUS DA SESSÃO em destaque:
+     `🟢 STATUS: LEAD CONVERTIDO` ou `🔴 STATUS: NÃO CONVERTIDO`.
 
-Responda em formato Markdown estruturado com:
-- **Resumo Executivo & Nota do Closer (0 a 10)**
-- **🎯 Pontos Fortes (Minucioso, com exemplos do texto)**
-- **🚨 Pontos de Melhoria Críticos (Erros no roteiro ou gatilhos perdidos)**
-- **💡 Ações Práticas Recomendadas para o Próximo Treinamento**
+2. LÓGICA DE PONTUAÇÃO:
+   - **LEAD CONVERTIDO (Nota 8.0 a 10.0):** Reconheça o sucesso comercial. Mesmo se o closer tiver pulado alguma etapa por conta da rapidez e prontidão do lead aquecido da Ricarreira, valorize a eficácia de vendas.
+   - **NÃO CONVERTIDO + ROTEIRO BOM (Nota 6.5 a 8.0):** Se o lead não comprou por motivo financeiro/imprevisto pessoal, mas o closer executou a estrutura FHT com maestria, pontue bem o processo, mas identifique os gatilhos finais faltantes.
+   - **NÃO CONVERTIDO + ROTEIRO FRACO (Nota 0 a 6.0):** Se o closer cometeu erros de condução, não ancorou preços e perdeu o fechamento.
+
+3. PILARES FHT AVALIADOS:
+   - Diagnóstico do momento profissional do Lead
+   - Ancoragem Acadêmica & LinkedIn
+   - Calculadora 'Tempo é Dinheiro'
+   - Ancoragem Dupla de Preço (Âncora 1: 12x R$ 997 / R$ 9.500 à vista -> Condição Urgência: R$ 8.500 à vista ou R$ 5.000 ao vivo)
+   - Prova Social / Garantia Condicional de 51 dias
+   - Pitch de Fechamento e Contorno de Objeções High Ticket
+
+ESTRUTURA DE RESPOSTA OBRIGATÓRIA (Markdown):
+### 🟢 STATUS: LEAD CONVERTIDO  *(ou 🔴 STATUS: NÃO CONVERTIDO)*
+
+**Resumo Executivo & Nota do Closer: [X.X / 10]**
+*(Explicar detalhadamente a nota considerando o resultado de conversão e a aderência ao roteiro FHT)*
+
+---
+- **🎯 Pontos Fortes da Sessão**
+- **🚨 Pontos de Melhoria Críticos**
+- **💡 Plano de Ação para o Próximo Treinamento**
 """
                     
                     response = client.chat.completions.create(
                         model="gpt-4o",
                         messages=[
                             {"role": "system", "content": prompt_sistema},
-                            {"role": "user", "content": f"Lead/Reunião: {nome_lead}\nClosers: {closers_nomes}\n\nTranscrição/Dados da Sessão:\n{transcricao_texto}"}
+                            {"role": "user", "content": f"Empresa: Ricarreira\nLead: {nome_lead}\nClosers: {closers_nomes}\n\nTranscrição/Dados da Sessão:\n{transcricao_texto}"}
                         ],
                         temperature=0.3
                     )

@@ -1,6 +1,5 @@
 import streamlit as st
 import json
-import os
 
 # Configuração da página
 st.set_page_config(
@@ -53,19 +52,19 @@ else:
     
     if st.sidebar.button("🔄 Buscar Sessões na Agenda Real"):
         try:
-            # Tratamento inteligente do JSON de credenciais para evitar erros de formatação
             if "google_credentials" in st.secrets:
                 raw_creds = st.secrets["google_credentials"]
                 
-                # Se for string, limpa quebras e caracteres especiais
                 if isinstance(raw_creds, str):
-                    # Tenta carregar limpando formatação incorreta
                     clean_json = raw_creds.strip()
                     creds_dict = json.loads(clean_json, strict=False)
                 else:
                     creds_dict = dict(raw_creds)
                 
-                # Tenta importar bibliotecas do Google
+                # Tratamento do erro da chave PEM (\n literal para quebra real)
+                if "private_key" in creds_dict:
+                    creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
+                
                 from google.oauth2 import service_account
                 from googleapiclient.discovery import build
                 
@@ -76,7 +75,6 @@ else:
                 
                 service = build('calendar', 'v3', credentials=credentials)
                 
-                # Busca eventos na agenda
                 events_result = service.events().list(
                     calendarId=email_equipe,
                     maxResults=10,

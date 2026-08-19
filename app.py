@@ -32,7 +32,11 @@ if fonte_dados == "Modo Apresentação / Simulador":
 
 else:
     st.sidebar.subheader("🔗 Conexão Google Workspace")
-    email_equipe = st.sidebar.text_input("E-mail ou ID da Agenda da Equipe:", value="equipe@ricarreira.com")
+    
+    # ID fixo padrão salvo para não ter que digitar toda vez
+    id_agenda_padrao = "c_a962f63fcda4c9ee4743b4876d57e5271e457be2e914af39e1227aa0dcf1ca31@group.calendar.google.com"
+    
+    email_equipe = st.sidebar.text_input("ID da Agenda da Equipe:", value=id_agenda_padrao)
     
     if st.sidebar.button("🔄 Buscar Sessões na Agenda Real"):
         try:
@@ -52,7 +56,7 @@ else:
                 
                 service = build('calendar', 'v3', credentials=credentials)
                 
-                # Busca até 1000 reuniões na agenda
+                # Busca até 1000 reuniões na agenda com o ID fixo
                 events_result = service.events().list(
                     calendarId=email_equipe,
                     maxResults=1000,

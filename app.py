@@ -33,11 +33,13 @@ if fonte_dados == "Modo Apresentação / Simulador":
 else:
     st.sidebar.subheader("🔗 Conexão Google Workspace")
     
-    # ID fixo padrão salvo para não ter que digitar toda vez
     id_agenda_padrao = "c_a962f63fcda4c9ee4743b4876d57e5271e457be2e914af39e1227aa0dcf1ca31@group.calendar.google.com"
-    
     email_equipe = st.sidebar.text_input("ID da Agenda da Equipe:", value=id_agenda_padrao)
     
+    # Inicializa o estado de sessões na memória do Streamlit
+    if "eventos_carregados" not in st.session_state:
+        st.session_state["eventos_carregados"] = []
+
     if st.sidebar.button("🔄 Buscar Sessões na Agenda Real"):
         try:
             if "google_credentials" in st.secrets:
@@ -67,15 +69,33 @@ else:
                 
                 if not events:
                     st.sidebar.info("Nenhuma sessão 1A1 encontrada na agenda.")
+                    st.session_state["eventos_carregados"] = []
                 else:
+                    st.session_state["eventos_carregados"] = events
                     st.sidebar.success(f"Encontradas {len(events)} reuniões!")
-                    opcoes_eventos = [f"{e.get('summary', 'Sessão 1A1')} ({e.get('start', {}).get('dateTime', e.get('start', {}).get('date', ''))[:10]})" for e in events]
-                    st.sidebar.selectbox("Selecione a Reunião:", opcoes_eventos)
             else:
                 st.sidebar.error("Seção [google_credentials] não encontrada nas Secrets do Streamlit.")
                 
         except Exception as e:
             st.sidebar.error(f"Erro na conexão com o Google: {str(e)}")
+
+    # Exibe o menu de seleção se houver reuniões gravadas na memória
+    if st.session_state["eventos_carregados"]:
+        events = st.session_state["eventos_carregados"]
+        opcoes_map = {}
+        for e in events:
+            nome = e.get('summary', 'Sessão 1A1')
+            data = e.get('start', {}).get('dateTime', e.get('start', {}).get('date', ''))[:10]
+            label = f"{nome} ({data})"
+            opcoes_map[label] = e
+
+        evento_sel_label = st.sidebar.selectbox("Selecione a Reunião:", list(opcoes_map.keys()))
+        evento_obj = opcoes_map[evento_sel_label]
+
+        # Extrai descrição / transcrição se houver no evento da agenda
+        transcricao_texto = evento_obj.get("description", "Sessão selecionada sem descrição/transcrição anexada na agenda.")
+        st.sidebar.write("---")
+        st.sidebar.markdown(f"**Lead / Evento:** {evento_obj.get('summary', 'Sessão 1A1')}")
 
 # Painel Principal
 if transcricao_texto:

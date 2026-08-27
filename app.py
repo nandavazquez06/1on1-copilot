@@ -6,7 +6,7 @@ st.set_page_config(page_title="Dashboard de Feedbacks Ricarreira - Sessão 1A1",
 st.title("📊 Dashboard de Feedbacks - Sessão 1A1 (Ricarreira)")
 st.caption("Avaliador Inteligente de Chamadas High Ticket | Metodologia FHT (Formula High Ticket)")
 
-# Puxa as configurações automáticas das Secrets do Streamlit
+# Puxa as configurações automáticas das Secrets
 openai_key = st.secrets.get("openai_api_key", "")
 id_agenda_secrets = st.secrets.get("google_calendar_id", "")
 
@@ -58,8 +58,14 @@ else:
             if "google_credentials" in st.secrets:
                 creds_dict = dict(st.secrets["google_credentials"])
                 
+                # Tratamento avançado de desescapamento de quebras de linha PEM
                 if "private_key" in creds_dict:
-                    creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
+                    pk_raw = str(creds_dict["private_key"])
+                    pk_formatted = pk_raw.replace("\\n", "\n").replace("\r", "")
+                    if "-----BEGIN PRIVATE KEY-----" in pk_formatted:
+                        # Garante formatação exata sem espaços ou caracteres ocultos extras
+                        lines = [line.strip() for line in pk_formatted.split("\n") if line.strip()]
+                        creds_dict["private_key"] = "\n".join(lines) + "\n"
                 
                 from google.oauth2 import service_account
                 from googleapiclient.discovery import build

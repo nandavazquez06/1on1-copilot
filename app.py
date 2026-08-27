@@ -6,9 +6,14 @@ st.set_page_config(page_title="Dashboard de Feedbacks Ricarreira - Sessão 1A1",
 st.title("📊 Dashboard de Feedbacks - Sessão 1A1 (Ricarreira)")
 st.caption("Avaliador Inteligente de Chamadas High Ticket | Metodologia FHT (Formula High Ticket)")
 
-# Sidebar - Configurações e Fonte de Dados
+# Puxa a chave da OpenAI direto das Secrets ou permite digitar manualmente
+openai_key = st.secrets.get("openai_api_key", "")
+
 st.sidebar.header("⚙️ Configurações da Chamada")
-openai_key = st.sidebar.text_input("OpenAI API Key", type="password")
+if openai_key:
+    st.sidebar.success("🔑 API Key da OpenAI conectada automaticamente!")
+else:
+    openai_key = st.sidebar.text_input("OpenAI API Key (Manual)", type="password")
 
 st.sidebar.markdown("---")
 st.sidebar.header("📅 Origem dos Dados")
@@ -42,7 +47,7 @@ if fonte_dados == "Modo Apresentação / Simulador":
 else:
     st.sidebar.subheader("🔗 Conexão Google Workspace")
     
-    id_agenda_padrao = "c_a962f63fcda4c9ee4743b4876d57e5271e457be2e914af39e1227aa0dcf1ca31@group.calendar.google.com"
+    id_agenda_padrao = "COLE_AQUI_O_SEU_ID_DA_AGENDA"
     email_equipe = st.sidebar.text_input("ID da Agenda da Equipe:", value=id_agenda_padrao)
     
     if "eventos_carregados" not in st.session_state:
@@ -115,7 +120,7 @@ if transcricao_texto:
 
     if st.button("🚀 Gerar Análise de Performance com IA"):
         if not openai_key:
-            st.error("🔑 Por favor, insira sua OpenAI API Key na barra lateral para gerar o diagnóstico com IA.")
+            st.error("🔑 Nenhuma API Key da OpenAI foi encontrada. Insira nas Secrets do Streamlit ou digite na barra lateral.")
         else:
             with st.spinner("🤖 Analisando a reunião da Ricarreira com base na metodologia FHT..."):
                 try:

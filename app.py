@@ -6,12 +6,13 @@ st.set_page_config(page_title="Dashboard de Feedbacks Ricarreira - Sessão 1A1",
 st.title("📊 Dashboard de Feedbacks - Sessão 1A1 (Ricarreira)")
 st.caption("Avaliador Inteligente de Chamadas High Ticket | Metodologia FHT (Formula High Ticket)")
 
-# Puxa a chave da OpenAI direto das Secrets ou permite digitar manualmente
+# Puxa as configurações automáticas das Secrets do Streamlit
 openai_key = st.secrets.get("openai_api_key", "")
+id_agenda_secrets = st.secrets.get("google_calendar_id", "")
 
-st.sidebar.header("⚙️ Configurações da Chamada")
+st.sidebar.header("⚙️ Configurações do App")
 if openai_key:
-    st.sidebar.success("🔑 API Key da OpenAI conectada automaticamente!")
+    st.sidebar.success("🔑 OpenAI API Key conectada!")
 else:
     openai_key = st.sidebar.text_input("OpenAI API Key (Manual)", type="password")
 
@@ -47,8 +48,7 @@ if fonte_dados == "Modo Apresentação / Simulador":
 else:
     st.sidebar.subheader("🔗 Conexão Google Workspace")
     
-    id_agenda_padrao = "COLE_AQUI_O_SEU_ID_DA_AGENDA"
-    email_equipe = st.sidebar.text_input("ID da Agenda da Equipe:", value=id_agenda_padrao)
+    email_equipe = st.sidebar.text_input("ID da Agenda da Equipe:", value=id_agenda_secrets)
     
     if "eventos_carregados" not in st.session_state:
         st.session_state["eventos_carregados"] = []

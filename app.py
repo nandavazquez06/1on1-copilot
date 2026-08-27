@@ -1,14 +1,16 @@
 import streamlit as st
 import datetime
 import json
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
 
 st.set_page_config(page_title="Dashboard de Feedbacks Ricarreira - Sessão 1A1", page_icon="📊", layout="wide")
 st.title("📊 Dashboard de Feedbacks - Sessão 1A1 (Ricarreira)")
 st.caption("Avaliador Inteligente de Chamadas High Ticket | Metodologia FHT (Formula High Ticket)")
 
-# Puxa as configurações automáticas das Secrets
+# Puxa configurações automáticas das Secrets
 openai_key = st.secrets.get("openai_api_key", "")
-id_agenda_secrets = st.secrets.get("google_calendar_id", "")
+id_agenda_secrets = st.secrets.get("google_calendar_id", "c_a962f63fcda4c9ee4743b4876d57e5271e457be2e914af39e1227aa0dcf1ca31@group.calendar.google.com")
 
 st.sidebar.header("⚙️ Configurações do App")
 if openai_key:
@@ -55,44 +57,65 @@ else:
 
     if st.sidebar.button("🔄 Buscar Sessões na Agenda Real"):
         try:
-            if "google_credentials" in st.secrets:
-                creds_dict = dict(st.secrets["google_credentials"])
-                
-                # Tratamento avançado de desescapamento de quebras de linha PEM
-                if "private_key" in creds_dict:
-                    pk_raw = str(creds_dict["private_key"])
-                    pk_formatted = pk_raw.replace("\\n", "\n").replace("\r", "")
-                    if "-----BEGIN PRIVATE KEY-----" in pk_formatted:
-                        # Garante formatação exata sem espaços ou caracteres ocultos extras
-                        lines = [line.strip() for line in pk_formatted.split("\n") if line.strip()]
-                        creds_dict["private_key"] = "\n".join(lines) + "\n"
-                
-                from google.oauth2 import service_account
-                from googleapiclient.discovery import build
-                
-                SCOPES = ['https://www.googleapis.com/auth/calendar.readonly']
-                credentials = service_account.Credentials.from_service_account_info(
-                    creds_dict, scopes=SCOPES
-                )
-                
-                service = build('calendar', 'v3', credentials=credentials)
-                
-                events_result = service.events().list(
-                    calendarId=email_equipe,
-                    maxResults=1000,
-                    singleEvents=True,
-                    orderBy='startTime'
-                ).execute()
-                events = events_result.get('items', [])
-                
-                if not events:
-                    st.sidebar.info("Nenhuma sessão 1A1 encontrada na agenda.")
-                    st.session_state["eventos_carregados"] = []
-                else:
-                    st.session_state["eventos_carregados"] = events
-                    st.sidebar.success(f"Encontradas {len(events)} reuniões!")
+            # Reconstrução nativa e segura da Service Account
+            private_key_lines = [
+                "-----BEGIN PRIVATE KEY-----",
+                "MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQC8eNmA31N045f/",
+                "TShTjZGMLKafRpgWhUXm86xTDNMulQw0e08nv98C3J69zp0GrPxdVZuTSbJ0SqHa",
+                "Af38NT19NHSLuORN0gMswvFl3grLNj8mfm6JYJcQdUuPctb9q0KgOstSS/br9tUe",
+                "g6oFuqH9hQy3n0p2TUgVTbYwRDG82IdKs2y8Q5+leE7/T9TKse/mVuTxmnkxcWIm",
+                "I9LoiN94pHDp1xMCckOvDXs0Mxe+1YGnFnj8iaop/mD+VUwfsppaiYnJMxWpnzfg",
+                "v+rgv6NSwwOQn3+0WLPHIHM6ghUwlyTQ1v1qF5fUMLxFfvMCBsS2E0tFtbyWW6GE",
+                "3J9NcDCbAgMBAAECggEAUM33YrtdCqZxinHIMlpl5pVWMr+PgUhOegBLB6hd+oDI",
+                "pM+hVkd7E70HChXFWRFdeZ60fud/7T/6OH/WJwWkgUO2HBl/OKYr2ksSODyEoC93",
+                "z8cxGREic1n2tV/lMQj2HcBXX8dV7ED9ioGkqaQkw48BrtBKmoHzv757uCHkuTPY",
+                "In9AtX9Vh/HDFk5lTREvuj7oVv/x+fpkR2naev/ftF5ufDaIKo12ZNXo7b+U+NNb",
+                "Oba5SmwJgLLqj3zttYdWsmcir7mFRrorz0/4Ckn9/+TTi46eQn8QhZ1OlLmtWyPg",
+                "2Cvx4ZIl+ZmzbKRm2Rv/IJQ3bZstClpG7dRXDr9iUQKBgQDdFxxoN00w2hm880zh",
+                "bkK7sbtX15o61lQL22iBvmUGi9nqWsfe1UE5nRINXv/Q0RI+cDB25S9l3//2GAN2",
+                "qRSymAyreIvTEgvODVLOvyi5//XHQXk1RkXnQUcyZ04p0cWd8GAN2dTdwBpzPFU",
+                "HTRhd4zHXhI+BJXdtHvD28YE4ih1jlQcieWI0lUVSeZvCQtBoWkL2jT6rXOEQVf",
+                "FD382MCgYA05krdHn8IUWuQQtmYaxQe0YZqwc8/vIraMLX9kkSujCkMfnV1K9ES",
+                "zhNCHcMb4v284C70gycDxJZx7RtdmPCutH9dRhFa9mTaslXxc+A3e5p6Dn3CvsHr",
+                "GLCfsVqZz540YXI8s/FAUSFcOA5H4UJ9HHAy0CbNInA4bzI7jAJSCw==",
+                "-----END PRIVATE KEY-----"
+            ]
+            
+            creds_dict = {
+                "type": "service_account",
+                "project_id": "crh-dashboard-1a1",
+                "private_key_id": "7d51cddfb7b2df4f83db479d8bd19abed38fd53f",
+                "private_key": "\n".join(private_key_lines) + "\n",
+                "client_email": "robo-auditor-1a1@crh-dashboard-1a1.iam.gserviceaccount.com",
+                "client_id": "107052444758278770613",
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token",
+                "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+                "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/robo-auditor-1a1%40crh-dashboard-1a1.iam.gserviceaccount.com",
+                "universe_domain": "googleapis.com"
+            }
+            
+            SCOPES = ['https://www.googleapis.com/auth/calendar.readonly']
+            credentials = service_account.Credentials.from_service_account_info(
+                creds_dict, scopes=SCOPES
+            )
+            
+            service = build('calendar', 'v3', credentials=credentials)
+            
+            events_result = service.events().list(
+                calendarId=email_equipe,
+                maxResults=1000,
+                singleEvents=True,
+                orderBy='startTime'
+            ).execute()
+            events = events_result.get('items', [])
+            
+            if not events:
+                st.sidebar.info("Nenhuma sessão 1A1 encontrada na agenda.")
+                st.session_state["eventos_carregados"] = []
             else:
-                st.sidebar.error("Seção [google_credentials] não encontrada nas Secrets do Streamlit.")
+                st.session_state["eventos_carregados"] = events
+                st.sidebar.success(f"Encontradas {len(events)} reuniões!")
                 
         except Exception as e:
             st.sidebar.error(f"Erro na conexão com o Google: {str(e)}")

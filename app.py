@@ -59,7 +59,7 @@ nome_lead = ""
 if "eventos_carregados" not in st.session_state:
     st.session_state["eventos_carregados"] = []
 
-if st.sidebar.button("🔄 Buscar Sessões do Período na Agenda"):
+if st.sidebar.button("🔄 Buscar Diagnósticos de Carreira"):
     try:
         if "google_credentials" in st.secrets:
             creds_dict = dict(st.secrets["google_credentials"])
@@ -78,21 +78,29 @@ if st.sidebar.button("🔄 Buscar Sessões do Período na Agenda"):
             time_min = datetime.datetime.combine(inicio_data, datetime.time.min).isoformat() + 'Z'
             time_max = datetime.datetime.combine(fim_data, datetime.time.max).isoformat() + 'Z'
             
+            # Busca estrita filtrando por título do evento "Diagnóstico Gratuito de Carreira"
             events_result = service.events().list(
                 calendarId=email_equipe,
                 timeMin=time_min,
                 timeMax=time_max,
+                q="Diagnóstico Gratuito de Carreira",
                 singleEvents=True,
                 orderBy='startTime'
             ).execute()
             events = events_result.get('items', [])
             
-            if not events:
-                st.sidebar.info("Nenhuma reunião encontrada para o período selecionado.")
+            # Filtro adicional de segurança no Python para garantir o título
+            events_filtrados = [
+                e for e in events 
+                if "diagnóstico gratuito de carreira" in e.get('summary', '').lower()
+            ]
+            
+            if not events_filtrados:
+                st.sidebar.info("Nenhum 'Diagnóstico Gratuito de Carreira' encontrado para o período.")
                 st.session_state["eventos_carregados"] = []
             else:
-                st.session_state["eventos_carregados"] = events
-                st.sidebar.success(f"Encontradas {len(events)} reuniões no período!")
+                st.session_state["eventos_carregados"] = events_filtrados
+                st.sidebar.success(f"Encontrados {len(events_filtrados)} Diagnósticos no período!")
         else:
             st.sidebar.error("Seção [google_credentials] não encontrada nas Secrets do Streamlit.")
             
@@ -103,9 +111,8 @@ if st.session_state["eventos_carregados"]:
     events = st.session_state["eventos_carregados"]
     opcoes_map = {}
     for e in events:
-        nome = e.get('summary', 'Sessão 1A1')
+        nome = e.get('summary', 'Diagnóstico Gratuito de Carreira')
         data = e.get('start', {}).get('dateTime', e.get('start', {}).get('date', ''))[:10]
-        # Formata a data para padrão brasileiro
         try:
             d_obj = datetime.datetime.strptime(data, "%Y-%m-%d")
             data_br = d_obj.strftime("%d/%m")
@@ -115,10 +122,10 @@ if st.session_state["eventos_carregados"]:
         label = f"🗓️ [{data_br}] {nome}"
         opcoes_map[label] = e
 
-    evento_sel_label = st.sidebar.selectbox("Selecione a Reunião para Análise:", list(opcoes_map.keys()))
+    evento_sel_label = st.sidebar.selectbox("Selecione o Diagnóstico para Análise:", list(opcoes_map.keys()))
     evento_obj = opcoes_map[evento_sel_label]
 
-    nome_lead = evento_obj.get('summary', 'Sessão 1A1')
+    nome_lead = evento_obj.get('summary', 'Diagnóstico Gratuito de Carreira')
     descricao_evento = evento_obj.get("description", "")
     
     transcricao_texto = descricao_evento if descricao_evento.strip() else f"Sessão: {nome_lead}\nData: {evento_obj.get('start', {}).get('dateTime', '')}\nParticipantes: {', '.join([p.get('email', '') for p in evento_obj.get('attendees', []) if isinstance(p, dict)])}"
@@ -138,9 +145,9 @@ media_nota = (sum(item["nota"] for item in historico) / total_analisadas) if tot
 
 col1, col2, col3, col4 = st.columns(4)
 with col1:
-    st.metric("📅 Agenda no Período", f"{total_periodo}")
+    st.metric("📅 Diagnósticos Agendados", f"{total_periodo}")
 with col2:
-    st.metric("📊 Auditadas pela IA", f"{total_analisadas}")
+    st.metric("📊 Auditados pela IA", f"{total_analisadas}")
 with col3:
     st.metric("🟢 Taxa de Conversão", f"{total_convertidos} ({taxa_conversao:.1f}%)")
 with col4:
@@ -149,10 +156,10 @@ with col4:
 st.markdown("---")
 
 # Painel Principal
-st.subheader(f"📋 Analisando: {nome_lead if nome_lead else 'Nenhuma sessão selecionada'}")
+st.subheader(f"📋 Analisando: {nome_lead if nome_lead else 'Nenhum diagnóstico selecionado'}")
 
 if transcricao_texto:
-    with st.expander("📄 Ver Transcrição / Detalhes da Reunião Selecionada"):
+    with st.expander("📄 Ver Transcrição / Detalhes do Diagnóstico Selecionado"):
         st.text_area("Conteúdo da Sessão:", value=transcricao_texto, height=150, disabled=True)
 
     if st.button("🚀 Gerar Análise de Performance com IA"):
@@ -202,7 +209,7 @@ ESTRUTURA DE RESPOSTA OBRIGATÓRIA (Markdown):
                         model="gpt-4o",
                         messages=[
                             {"role": "system", "content": prompt_sistema},
-                            {"role": "user", "content": f"Empresa: Ricarreira\nLead: {nome_lead}\n\nTranscrição/Dados da Sessão:\n{transcricao_texto}"}
+                            {"role": "user", "content": f"Empresa: Ricarreira\nLead/Sessão: {nome_lead}\n\nTranscrição/Dados da Sessão:\n{transcricao_texto}"}
                         ],
                         temperature=0.3
                     )
@@ -236,4 +243,4 @@ if historico:
         st.error(f"🔴 NÃO CONVERTIDO | Nota Atribuída: {historico[-1]['nota']}/10.0")
 
 else:
-    st.info("👈 Selecione o período desejado na barra lateral e clique em 'Buscar Sessões do Período na Agenda'.")
+    st.info("👈 Selecione o período desejado na barra lateral e clique em 'Buscar Diagnósticos de Carreira'.")

@@ -36,7 +36,7 @@ nome_lead = ""
 if "eventos_carregados" not in st.session_state:
     st.session_state["eventos_carregados"] = []
 
-if st.sidebar.button("🔄 Buscar Sessões na Agenda Real"):
+if st.sidebar.button("🔄 Buscar Sessões da Semana na Agenda"):
     try:
         if "google_credentials" in st.secrets:
             creds_dict = dict(st.secrets["google_credentials"])
@@ -51,8 +51,18 @@ if st.sidebar.button("🔄 Buscar Sessões na Agenda Real"):
             
             service = build('calendar', 'v3', credentials=credentials)
             
+            # Cálculo dos limites da semana atual (Segunda-feira até Domingo)
+            hoje = datetime.datetime.now(datetime.timezone.utc)
+            inicio_semana = (hoje - datetime.timedelta(days=hoje.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
+            fim_semana = inicio_semana + datetime.timedelta(days=7)
+            
+            time_min = inicio_semana.isoformat()
+            time_max = fim_semana.isoformat()
+            
             events_result = service.events().list(
                 calendarId=email_equipe,
+                timeMin=time_min,
+                timeMax=time_max,
                 maxResults=1000,
                 singleEvents=True,
                 orderBy='startTime'
@@ -60,11 +70,11 @@ if st.sidebar.button("🔄 Buscar Sessões na Agenda Real"):
             events = events_result.get('items', [])
             
             if not events:
-                st.sidebar.info("Nenhuma sessão 1A1 encontrada na agenda.")
+                st.sidebar.info("Nenhuma sessão 1A1 encontrada para a semana atual.")
                 st.session_state["eventos_carregados"] = []
             else:
                 st.session_state["eventos_carregados"] = events
-                st.sidebar.success(f"Encontradas {len(events)} reuniões!")
+                st.sidebar.success(f"Encontradas {len(events)} reuniões nesta semana!")
         else:
             st.sidebar.error("Seção [google_credentials] não encontrada nas Secrets do Streamlit.")
             
@@ -80,7 +90,7 @@ if st.session_state["eventos_carregados"]:
         label = f"{nome} ({data})"
         opcoes_map[label] = e
 
-    evento_sel_label = st.sidebar.selectbox("Selecione a Reunião:", list(opcoes_map.keys()))
+    evento_sel_label = st.sidebar.selectbox("Selecione a Reunião da Semana:", list(opcoes_map.keys()))
     evento_obj = opcoes_map[evento_sel_label]
 
     nome_lead = evento_obj.get('summary', 'Sessão 1A1')
@@ -92,21 +102,24 @@ if st.session_state["eventos_carregados"]:
     st.sidebar.markdown(f"**Lead Selecionado:** {nome_lead}")
 
 # -------------------------------------------------------------
-# SEÇÃO DE KPIS COMERCIAIS NO TOPO
+# SEÇÃO DE KPIS COMERCIAIS DA SEMANA NO TOPO
 # -------------------------------------------------------------
 historico = st.session_state["historico_analises"]
+total_semana = len(st.session_state["eventos_carregados"])
 total_analisadas = len(historico)
 total_convertidos = sum(1 for item in historico if item["convertido"])
 taxa_conversao = (total_convertidos / total_analisadas * 100) if total_analisadas > 0 else 0.0
 media_nota = (sum(item["nota"] for item in historico) / total_analisadas) if total_analisadas > 0 else 0.0
 
-col1, col2, col3 = st.columns(3)
+col1, col2, col3, col4 = st.columns(4)
 with col1:
-    st.metric("📊 Total de Chamadas Analisadas", f"{total_analisadas}")
+    st.metric("📅 Sessões da Semana", f"{total_semana}")
 with col2:
-    st.metric("🟢 Leads Convertidos (Taxa)", f"{total_convertidos} ({taxa_conversao:.1f}%)")
+    st.metric("📊 Analisadas na Semana", f"{total_analisadas}")
 with col3:
-    st.metric("⭐ Média de Performance (FHT)", f"{media_nota:.1f} / 10.0")
+    st.metric("🟢 Taxa de Conversão", f"{total_convertidos} ({taxa_conversao:.1f}%)")
+with col4:
+    st.metric("⭐ Nota Média FHT", f"{media_nota:.1f} / 10.0")
 
 st.markdown("---")
 
@@ -198,4 +211,4 @@ if historico:
         st.error(f"🔴 NÃO CONVERTIDO | Nota Atribuída: {historico[-1]['nota']}/10.0")
 
 else:
-    st.info("👈 Selecione uma sessão na barra lateral e clique em 'Gerar Análise de Performance com IA' para começar.")
+    st.info("👈 Clique no botão na barra lateral para buscar as sessões agendadas nesta semana.")

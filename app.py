@@ -18,96 +18,71 @@ else:
     openai_key = st.sidebar.text_input("OpenAI API Key (Manual)", type="password")
 
 st.sidebar.markdown("---")
-st.sidebar.header("📅 Origem dos Dados")
+st.sidebar.header("📅 Agenda do Google Workspace")
 
-fonte_dados = st.sidebar.radio(
-    "Selecione a Fonte das Sessões:",
-    ["Modo Apresentação / Simulador", "Agenda do Google (API Real)"]
-)
+email_equipe = st.sidebar.text_input("ID da Agenda da Equipe:", value=id_agenda_secrets)
 
 transcricao_texto = ""
 nome_lead = ""
 closers_nomes = ""
 
-if fonte_dados == "Modo Apresentação / Simulador":
-    st.sidebar.subheader("⚡ Modo Apresentação Ao Vivo")
-    if st.sidebar.checkbox("Carregar Transcrição de Exemplo", value=True):
-        nome_lead = "Mariana Mansur"
-        closers_nomes = "Fernanda Vazquez & Ricardo Batista"
-        transcricao_texto = """[00:05] Closer: Olá Mariana, tudo bem? Seja bem-vinda à nossa sessão 1A1 da Ricarreira.
-[00:15] Lead: Olá! Tudo ótimo, assisti a imersão do Ricardo e o conteúdo do YouTube da Ricarreira e já queria tirar dúvidas sobre o CRH.
-[00:30] Closer: Excelente. Hoje vamos analisar o seu momento atual de carreira, entender sua ancoragem acadêmica no LinkedIn e ver exatamente quanto tempo e dinheiro você está deixando na mesa com a nossa calculadora 'Tempo é Dinheiro'.
-[02:00] Closer: Analisando seu perfil, vejo que você tem uma bagagem incrível...
-[05:00] Closer: Apresentando a nossa proposta para o programa CRH: A Âncora 1 é de 12x de R$ 997 ou R$ 9.500 à vista. Comprando hoje na nossa condição de urgência, fica por R$ 8.500 à vista ou R$ 5.000 no plano especial ao vivo.
-[10:00] Lead: Perfeito! Vou passar o cartão agora para garantir minha vaga no CRH!
-[12:00] Closer: Excelente! Seja muito bem-vinda ao programa CRH da Ricarreira!"""
-    
-    nome_lead = st.sidebar.text_input("Nome do Lead", value=nome_lead)
-    closers_nomes = st.sidebar.text_input("Avaliados / Closers", value=closers_nomes)
-    transcricao_texto = st.sidebar.text_area("Cole a Transcrição da Sessão aqui:", value=transcricao_texto, height=200)
+if "eventos_carregados" not in st.session_state:
+    st.session_state["eventos_carregados"] = []
 
-else:
-    st.sidebar.subheader("🔗 Conexão Google Workspace")
-    
-    email_equipe = st.sidebar.text_input("ID da Agenda da Equipe:", value=id_agenda_secrets)
-    
-    if "eventos_carregados" not in st.session_state:
-        st.session_state["eventos_carregados"] = []
-
-    if st.sidebar.button("🔄 Buscar Sessões na Agenda Real"):
-        try:
-            if "google_credentials" in st.secrets:
-                creds_dict = dict(st.secrets["google_credentials"])
-                
-                if "private_key" in creds_dict:
-                    creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
-                
-                SCOPES = ['https://www.googleapis.com/auth/calendar.readonly']
-                credentials = service_account.Credentials.from_service_account_info(
-                    creds_dict, scopes=SCOPES
-                )
-                
-                service = build('calendar', 'v3', credentials=credentials)
-                
-                events_result = service.events().list(
-                    calendarId=email_equipe,
-                    maxResults=1000,
-                    singleEvents=True,
-                    orderBy='startTime'
-                ).execute()
-                events = events_result.get('items', [])
-                
-                if not events:
-                    st.sidebar.info("Nenhuma sessão 1A1 encontrada na agenda.")
-                    st.session_state["eventos_carregados"] = []
-                else:
-                    st.session_state["eventos_carregados"] = events
-                    st.sidebar.success(f"Encontradas {len(events)} reuniões!")
+if st.sidebar.button("🔄 Buscar Sessões na Agenda Real"):
+    try:
+        if "google_credentials" in st.secrets:
+            creds_dict = dict(st.secrets["google_credentials"])
+            
+            if "private_key" in creds_dict:
+                creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
+            
+            SCOPES = ['https://www.googleapis.com/auth/calendar.readonly']
+            credentials = service_account.Credentials.from_service_account_info(
+                creds_dict, scopes=SCOPES
+            )
+            
+            service = build('calendar', 'v3', credentials=credentials)
+            
+            events_result = service.events().list(
+                calendarId=email_equipe,
+                maxResults=1000,
+                singleEvents=True,
+                orderBy='startTime'
+            ).execute()
+            events = events_result.get('items', [])
+            
+            if not events:
+                st.sidebar.info("Nenhuma sessão 1A1 encontrada na agenda.")
+                st.session_state["eventos_carregados"] = []
             else:
-                st.sidebar.error("Seção [google_credentials] não encontrada nas Secrets do Streamlit.")
-                
-        except Exception as e:
-            st.sidebar.error(f"Erro na conexão com o Google: {str(e)}")
+                st.session_state["eventos_carregados"] = events
+                st.sidebar.success(f"Encontradas {len(events)} reuniões!")
+        else:
+            st.sidebar.error("Seção [google_credentials] não encontrada nas Secrets do Streamlit.")
+            
+    except Exception as e:
+        st.sidebar.error(f"Erro na conexão com o Google: {str(e)}")
 
-    if st.session_state["eventos_carregados"]:
-        events = st.session_state["eventos_carregados"]
-        opcoes_map = {}
-        for e in events:
-            nome = e.get('summary', 'Sessão 1A1')
-            data = e.get('start', {}).get('dateTime', e.get('start', {}).get('date', ''))[:10]
-            label = f"{nome} ({data})"
-            opcoes_map[label] = e
+if st.session_state["eventos_carregados"]:
+    events = st.session_state["eventos_carregados"]
+    opcoes_map = {}
+    for e in events:
+        nome = e.get('summary', 'Sessão 1A1')
+        data = e.get('start', {}).get('dateTime', e.get('start', {}).get('date', ''))[:10]
+        label = f"{nome} ({data})"
+        opcoes_map[label] = e
 
-        evento_sel_label = st.sidebar.selectbox("Selecione a Reunião:", list(opcoes_map.keys()))
-        evento_obj = opcoes_map[evento_sel_label]
+    evento_sel_label = st.sidebar.selectbox("Selecione a Reunião:", list(opcoes_map.keys()))
+    evento_obj = opcoes_map[evento_sel_label]
 
-        nome_lead = evento_obj.get('summary', 'Sessão 1A1')
-        descricao_evento = evento_obj.get("description", "")
-        
-        transcricao_texto = descricao_evento if descricao_evento.strip() else f"Sessão: {nome_lead}\nData: {evento_obj.get('start', {}).get('dateTime', '')}\nParticipantes: {', '.join([p.get('email', '') for p in evento_obj.get('attendees', [])])}"
-        
-        st.sidebar.write("---")
-        st.sidebar.markdown(f"**Lead Selecionado:** {nome_lead}")
+    nome_lead = evento_obj.get('summary', 'Sessão 1A1')
+    descricao_evento = evento_obj.get("description", "")
+    
+    transcricao_texto = descricao_evento if descricao_evento.strip() else f"Sessão: {nome_lead}\nData: {evento_obj.get('start', {}).get('dateTime', '')}\nParticipantes: {', '.join([p.get('email', '') for p in e.get('attendees', []) if isinstance(p, dict)])}"
+    
+    st.sidebar.write("---")
+    st.sidebar.markdown(f"**Lead Selecionado:** {nome_lead}")
 
 # Painel Principal
 st.subheader(f"📋 Analisando: {nome_lead if nome_lead else 'Nenhuma sessão selecionada'}")
@@ -163,7 +138,7 @@ ESTRUTURA DE RESPOSTA OBRIGATÓRIA (Markdown):
                         model="gpt-4o",
                         messages=[
                             {"role": "system", "content": prompt_sistema},
-                            {"role": "user", "content": f"Empresa: Ricarreira\nLead: {nome_lead}\nClosers: {closers_nomes}\n\nTranscrição/Dados da Sessão:\n{transcricao_texto}"}
+                            {"role": "user", "content": f"Empresa: Ricarreira\nLead: {nome_lead}\n\nTranscrição/Dados da Sessão:\n{transcricao_texto}"}
                         ],
                         temperature=0.3
                     )
@@ -176,4 +151,4 @@ ESTRUTURA DE RESPOSTA OBRIGATÓRIA (Markdown):
                     st.error(f"Erro ao chamar a OpenAI API: {str(err)}")
 
 else:
-    st.info("👈 Selecione uma sessão na barra lateral para carregar os dados e rodar a análise.")
+    st.info("👈 Clique no botão para buscar as sessões na agenda.")

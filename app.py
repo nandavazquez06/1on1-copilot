@@ -5,13 +5,13 @@ import re
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 
-st.set_page_config(page_title="Dashboard de Feedbacks Ricarreira - Sessão 1A1", page_icon="📊", layout="wide")
+st.set_page_config(page_title="Dashboard de Feedbacks - Sessão 1A1", page_icon="📊", layout="wide")
 
 # Inicialização do banco de dados temporário de análises da sessão
 if "historico_analises" not in st.session_state:
     st.session_state["historico_analises"] = []
 
-st.title("📊 Dashboard Executivo de Feedbacks - Sessão 1A1 (Ricarreira)")
+st.title("📊 Dashboard de Feedbacks - Sessão 1A1")
 st.caption("Avaliador Inteligente de Chamadas High Ticket | Metodologia FHT (Formula High Ticket)")
 
 # Puxa configurações automáticas das Secrets
@@ -26,7 +26,7 @@ else:
     openai_key = st.sidebar.text_input("OpenAI API Key (Manual)", type="password")
 
 st.sidebar.markdown("---")
-st.sidebar.header("📅 Filtro de Sessões por Período")
+st.sidebar.header("📅 Filtro por Período")
 
 email_equipe = st.sidebar.text_input("ID da Agenda da Equipe:", value=id_agenda_secrets)
 
@@ -166,7 +166,7 @@ if transcricao_texto:
         if not openai_key:
             st.error("🔑 Nenhuma API Key da OpenAI foi encontrada. Insira nas Secrets do Streamlit ou digite na barra lateral.")
         else:
-            with st.spinner("🤖 Analisando a reunião da Ricarreira com base na metodologia FHT..."):
+            with st.spinner("🤖 Analisando a reunião com base na metodologia FHT..."):
                 try:
                     from openai import OpenAI
                     client = OpenAI(api_key=openai_key)

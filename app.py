@@ -1,16 +1,24 @@
 import streamlit as st
 import datetime
 import json
+import re
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 
 st.set_page_config(page_title="Dashboard de Feedbacks Ricarreira - Sessão 1A1", page_icon="📊", layout="wide")
-st.title("📊 Dashboard de Feedbacks - Sessão 1A1 (Ricarreira)")
+
+# Inicialização do banco de dados temporário/histórico de análises
+if "historico_analises" not in st.session_state:
+    st.session_state["historico_analises"] = []
+
+st.title("📊 Dashboard Executivo de Feedbacks - Sessão 1A1 (Ricarreira)")
 st.caption("Avaliador Inteligente de Chamadas High Ticket | Metodologia FHT (Formula High Ticket)")
 
+# Puxa configurações automáticas das Secrets
 openai_key = st.secrets.get("openai_api_key", "")
 id_agenda_secrets = st.secrets.get("google_calendar_id", "")
 
+# Sidebar - Configurações
 st.sidebar.header("⚙️ Configurações do App")
 if openai_key:
     st.sidebar.success("🔑 OpenAI API Key conectada!")
@@ -24,7 +32,6 @@ email_equipe = st.sidebar.text_input("ID da Agenda da Equipe:", value=id_agenda_
 
 transcricao_texto = ""
 nome_lead = ""
-closers_nomes = ""
 
 if "eventos_carregados" not in st.session_state:
     st.session_state["eventos_carregados"] = []
@@ -79,10 +86,29 @@ if st.session_state["eventos_carregados"]:
     nome_lead = evento_obj.get('summary', 'Sessão 1A1')
     descricao_evento = evento_obj.get("description", "")
     
-    transcricao_texto = descricao_evento if descricao_evento.strip() else f"Sessão: {nome_lead}\nData: {evento_obj.get('start', {}).get('dateTime', '')}\nParticipantes: {', '.join([p.get('email', '') for p in e.get('attendees', []) if isinstance(p, dict)])}"
+    transcricao_texto = descricao_evento if descricao_evento.strip() else f"Sessão: {nome_lead}\nData: {evento_obj.get('start', {}).get('dateTime', '')}\nParticipantes: {', '.join([p.get('email', '') for p in evento_obj.get('attendees', []) if isinstance(p, dict)])}"
     
     st.sidebar.write("---")
     st.sidebar.markdown(f"**Lead Selecionado:** {nome_lead}")
+
+# -------------------------------------------------------------
+# SEÇÃO DE KPIS COMERCIAIS NO TOPO
+# -------------------------------------------------------------
+historico = st.session_state["historico_analises"]
+total_analisadas = len(historico)
+total_convertidos = sum(1 for item in historico if item["convertido"])
+taxa_conversao = (total_convertidos / total_analisadas * 100) if total_analisadas > 0 else 0.0
+media_nota = (sum(item["nota"] for item in historico) / total_analisadas) if total_analisadas > 0 else 0.0
+
+col1, col2, col3 = st.columns(3)
+with col1:
+    st.metric("📊 Total de Chamadas Analisadas", f"{total_analisadas}")
+with col2:
+    st.metric("🟢 Leads Convertidos (Taxa)", f"{total_convertidos} ({taxa_conversao:.1f}%)")
+with col3:
+    st.metric("⭐ Média de Performance (FHT)", f"{media_nota:.1f} / 10.0")
+
+st.markdown("---")
 
 # Painel Principal
 st.subheader(f"📋 Analisando: {nome_lead if nome_lead else 'Nenhuma sessão selecionada'}")
@@ -144,11 +170,32 @@ ESTRUTURA DE RESPOSTA OBRIGATÓRIA (Markdown):
                     )
                     
                     analise_ia = response.choices[0].message.content
-                    st.markdown("---")
-                    st.markdown(analise_ia)
                     
+                    # Extração automática da nota e status para os métricas do topo
+                    is_convertido = "LEAD CONVERTIDO" in analise_ia
+                    match_nota = re.search(r"(\d+[\.,]?\d*)\s*/\s*10", analise_ia)
+                    nota_extraida = float(match_nota.group(1).replace(",", ".")) if match_nota else 7.0
+
+                    # Salva no histórico e força atualização dos KPIs
+                    st.session_state["historico_analises"].append({
+                        "lead": nome_lead,
+                        "convertido": is_convertido,
+                        "nota": nota_extraida
+                    })
+
+                    st.experimental_rerun() if hasattr(st, "experimental_rerun") else st.rerun()
+
                 except Exception as err:
                     st.error(f"Erro ao chamar a OpenAI API: {str(err)}")
 
+# Exibe o resultado da última análise realizada se houver
+if historico:
+    st.markdown("---")
+    st.subheader(f"📊 Último Diagnóstico Gerado ({historico[-1]['lead']})")
+    if historico[-1]["convertido"]:
+        st.success(f"🟢 LEAD CONVERTIDO | Nota Atribuída: {historico[-1]['nota']}/10.0")
+    else:
+        st.error(f"🔴 NÃO CONVERTIDO | Nota Atribuída: {historico[-1]['nota']}/10.0")
+
 else:
-    st.info("👈 Clique no botão para buscar as sessões na agenda.")
+    st.info("👈 Selecione uma sessão na barra lateral e clique em 'Gerar Análise de Performance com IA' para começar.")

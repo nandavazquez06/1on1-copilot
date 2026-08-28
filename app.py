@@ -7,7 +7,7 @@ from googleapiclient.discovery import build
 
 st.set_page_config(page_title="Dashboard de Feedbacks Ricarreira - Sessão 1A1", page_icon="📊", layout="wide")
 
-# Inicialização do banco de dados temporário/histórico de análises
+# Inicialização do banco de dados temporário de análises da sessão
 if "historico_analises" not in st.session_state:
     st.session_state["historico_analises"] = []
 
@@ -26,9 +26,32 @@ else:
     openai_key = st.sidebar.text_input("OpenAI API Key (Manual)", type="password")
 
 st.sidebar.markdown("---")
-st.sidebar.header("📅 Agenda do Google Workspace")
+st.sidebar.header("📅 Filtro de Sessões por Período")
 
 email_equipe = st.sidebar.text_input("ID da Agenda da Equipe:", value=id_agenda_secrets)
+
+# Seletor do Período de Análise
+periodo_selecionado = st.sidebar.selectbox(
+    "Selecione o Período:",
+    ["Esta Semana (Semana Atual)", "Semana Passada", "Personalizado (Escolher Datas)"]
+)
+
+hoje = datetime.date.today()
+
+if periodo_selecionado == "Esta Semana (Semana Atual)":
+    inicio_data = hoje - datetime.timedelta(days=hoje.weekday())
+    fim_data = inicio_data + datetime.timedelta(days=6)
+elif periodo_selecionado == "Semana Passada":
+    inicio_data = hoje - datetime.timedelta(days=hoje.weekday() + 7)
+    fim_data = inicio_data + datetime.timedelta(days=6)
+else:
+    col_d1, col_d2 = st.sidebar.columns(2)
+    with col_d1:
+        inicio_data = st.date_input("De:", value=hoje - datetime.timedelta(days=7))
+    with col_d2:
+        fim_data = st.date_input("Até:", value=hoje)
+
+st.sidebar.caption(f"📍 Buscando entre: **{inicio_data.strftime('%d/%m/%Y')}** e **{fim_data.strftime('%d/%m/%Y')}**")
 
 transcricao_texto = ""
 nome_lead = ""
@@ -36,7 +59,7 @@ nome_lead = ""
 if "eventos_carregados" not in st.session_state:
     st.session_state["eventos_carregados"] = []
 
-if st.sidebar.button("🔄 Buscar Sessões da Semana na Agenda"):
+if st.sidebar.button("🔄 Buscar Sessões do Período na Agenda"):
     try:
         if "google_credentials" in st.secrets:
             creds_dict = dict(st.secrets["google_credentials"])
@@ -51,30 +74,25 @@ if st.sidebar.button("🔄 Buscar Sessões da Semana na Agenda"):
             
             service = build('calendar', 'v3', credentials=credentials)
             
-            # Cálculo dos limites da semana atual (Segunda-feira até Domingo)
-            hoje = datetime.datetime.now(datetime.timezone.utc)
-            inicio_semana = (hoje - datetime.timedelta(days=hoje.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
-            fim_semana = inicio_semana + datetime.timedelta(days=7)
-            
-            time_min = inicio_semana.isoformat()
-            time_max = fim_semana.isoformat()
+            # Formata datas com horário exato (00:00:00 até 23:59:59)
+            time_min = datetime.datetime.combine(inicio_data, datetime.time.min).isoformat() + 'Z'
+            time_max = datetime.datetime.combine(fim_data, datetime.time.max).isoformat() + 'Z'
             
             events_result = service.events().list(
                 calendarId=email_equipe,
                 timeMin=time_min,
                 timeMax=time_max,
-                maxResults=1000,
                 singleEvents=True,
                 orderBy='startTime'
             ).execute()
             events = events_result.get('items', [])
             
             if not events:
-                st.sidebar.info("Nenhuma sessão 1A1 encontrada para a semana atual.")
+                st.sidebar.info("Nenhuma reunião encontrada para o período selecionado.")
                 st.session_state["eventos_carregados"] = []
             else:
                 st.session_state["eventos_carregados"] = events
-                st.sidebar.success(f"Encontradas {len(events)} reuniões nesta semana!")
+                st.sidebar.success(f"Encontradas {len(events)} reuniões no período!")
         else:
             st.sidebar.error("Seção [google_credentials] não encontrada nas Secrets do Streamlit.")
             
@@ -87,10 +105,17 @@ if st.session_state["eventos_carregados"]:
     for e in events:
         nome = e.get('summary', 'Sessão 1A1')
         data = e.get('start', {}).get('dateTime', e.get('start', {}).get('date', ''))[:10]
-        label = f"{nome} ({data})"
+        # Formata a data para padrão brasileiro
+        try:
+            d_obj = datetime.datetime.strptime(data, "%Y-%m-%d")
+            data_br = d_obj.strftime("%d/%m")
+        except:
+            data_br = data
+            
+        label = f"🗓️ [{data_br}] {nome}"
         opcoes_map[label] = e
 
-    evento_sel_label = st.sidebar.selectbox("Selecione a Reunião da Semana:", list(opcoes_map.keys()))
+    evento_sel_label = st.sidebar.selectbox("Selecione a Reunião para Análise:", list(opcoes_map.keys()))
     evento_obj = opcoes_map[evento_sel_label]
 
     nome_lead = evento_obj.get('summary', 'Sessão 1A1')
@@ -102,10 +127,10 @@ if st.session_state["eventos_carregados"]:
     st.sidebar.markdown(f"**Lead Selecionado:** {nome_lead}")
 
 # -------------------------------------------------------------
-# SEÇÃO DE KPIS COMERCIAIS DA SEMANA NO TOPO
+# SEÇÃO DE KPIS COMERCIAIS DA SEMANA / PERÍODO
 # -------------------------------------------------------------
 historico = st.session_state["historico_analises"]
-total_semana = len(st.session_state["eventos_carregados"])
+total_periodo = len(st.session_state["eventos_carregados"])
 total_analisadas = len(historico)
 total_convertidos = sum(1 for item in historico if item["convertido"])
 taxa_conversao = (total_convertidos / total_analisadas * 100) if total_analisadas > 0 else 0.0
@@ -113,9 +138,9 @@ media_nota = (sum(item["nota"] for item in historico) / total_analisadas) if tot
 
 col1, col2, col3, col4 = st.columns(4)
 with col1:
-    st.metric("📅 Sessões da Semana", f"{total_semana}")
+    st.metric("📅 Agenda no Período", f"{total_periodo}")
 with col2:
-    st.metric("📊 Analisadas na Semana", f"{total_analisadas}")
+    st.metric("📊 Auditadas pela IA", f"{total_analisadas}")
 with col3:
     st.metric("🟢 Taxa de Conversão", f"{total_convertidos} ({taxa_conversao:.1f}%)")
 with col4:
@@ -211,4 +236,4 @@ if historico:
         st.error(f"🔴 NÃO CONVERTIDO | Nota Atribuída: {historico[-1]['nota']}/10.0")
 
 else:
-    st.info("👈 Clique no botão na barra lateral para buscar as sessões agendadas nesta semana.")
+    st.info("👈 Selecione o período desejado na barra lateral e clique em 'Buscar Sessões do Período na Agenda'.")

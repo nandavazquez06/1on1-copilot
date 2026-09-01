@@ -19,7 +19,6 @@ st.caption("Avaliador Inteligente de Chamadas High Ticket | Metodologia FHT (For
 # Credenciais
 openai_key = st.secrets.get("openai_api_key", "")
 id_agenda_secrets = st.secrets.get("google_calendar_id", "")
-ID_PLANILHA_PADRAO = "15EByU5f2Q_vX6L2mGkZ09jTh3J3aZJ3_G5eH9Wk8E"
 
 # Sidebar
 st.sidebar.header("⚙️ Configurações do App")
@@ -32,6 +31,12 @@ st.sidebar.markdown("---")
 st.sidebar.header("📅 Filtro por Período")
 
 email_equipe = st.sidebar.text_input("ID da Agenda da Equipe:", value=id_agenda_secrets)
+
+# ID da Planilha Master editável na sidebar
+id_planilha_input = st.sidebar.text_input(
+    "ID da Planilha Master (Google Sheets):",
+    value="15EByU5f2Q_vX6L2mGkZ09jTh3J3aZJ3_G5eH9Wk8E"
+)
 
 periodo_selecionado = st.sidebar.selectbox(
     "Selecione o Período:",
@@ -93,18 +98,25 @@ if st.sidebar.button("🔄 Sincronizar Agenda & Tabela Master"):
                 e for e in events if "diagnóstico gratuito de carreira" in e.get('summary', '').lower()
             ]
 
-            # 2. Busca Dados da Tabela Master no Google Sheets (Corrigido para 'v4')
-            try:
-                service_sheets = build('sheets', 'v4', credentials=credentials)
-                sheet_result = service_sheets.spreadsheets().values().get(
-                    spreadsheetId=ID_PLANILHA_PADRAO, range="Base_Master!A1:Z1000"
-                ).execute()
-                values = sheet_result.get('values', [])
-                if values:
-                    df = pd.DataFrame(values[1:], columns=values[0])
-                    st.session_state["dados_planilha"] = df
-            except Exception as e_sheet:
-                st.sidebar.warning(f"Agenda OK, mas erro ao ler Planilha Master: {str(e_sheet)}")
+            # 2. Busca Dados da Planilha descobrindo a Primeira Aba Automática
+            if id_planilha_input.strip():
+                try:
+                    service_sheets = build('sheets', 'v4', credentials=credentials)
+                    
+                    # Puxa metadados da planilha para pegar o nome correto da primeira aba
+                    sheet_metadata = service_sheets.spreadsheets().get(spreadsheetId=id_planilha_input.strip()).execute()
+                    sheets = sheet_metadata.get('sheets', [])
+                    primeira_aba = sheets[0].get("properties", {}).get("title", "Aba1") if sheets else "Aba1"
+                    
+                    sheet_result = service_sheets.spreadsheets().values().get(
+                        spreadsheetId=id_planilha_input.strip(), range=f"'{primeira_aba}'!A1:Z1000"
+                    ).execute()
+                    values = sheet_result.get('values', [])
+                    if values:
+                        df = pd.DataFrame(values[1:], columns=values[0])
+                        st.session_state["dados_planilha"] = df
+                except Exception as e_sheet:
+                    st.sidebar.warning(f"Agenda OK, mas erro ao ler Planilha: {str(e_sheet)}")
 
             st.sidebar.success(f"Encontrados {len(st.session_state['eventos_carregados'])} Diagnósticos!")
         else:
@@ -139,7 +151,7 @@ with col5:
 st.markdown("---")
 
 # -------------------------------------------------------------
-# 2. SELEÇÃO DE REUNIÃO E BUSCA AVANÇADA NA PLANILHA MASTER
+# 2. SELEÇÃO DE REUNIÃO E CRUZAMENTO COM A TABELA MASTER
 # -------------------------------------------------------------
 st.subheader("📋 Auditar Reunião 1A1")
 
@@ -165,7 +177,6 @@ if st.session_state["eventos_carregados"]:
         evento_obj = opcoes_map[evento_sel_label]
         nome_lead_bruto = evento_obj.get('summary', '')
         
-        # Extrai o nome do lead
         nome_lead_limpo = re.sub(r"(?i)diagnóstico\s+gratuito\s+de\s+carreira\s*[-–:]?", "", nome_lead_bruto).strip()
         descricao_evento = evento_obj.get("description", "")
         transcricao_texto = descricao_evento if descricao_evento.strip() else f"Sessão: {nome_lead_bruto}\nData: {evento_obj.get('start', {}).get('dateTime', '')}"
@@ -175,14 +186,23 @@ if st.session_state["eventos_carregados"]:
     closer_master = "Desconhecido"
     objecao_master = "Não registrada"
     
-    if not df_master.empty and "Cliente" in df_master.columns:
+    if not df_master.empty:
+        # Tenta achar a coluna de nome do cliente (Cliente ou Lead ou Nome)
+        col_cliente = [c for c in df_master.columns if "cliente" in c.lower() or "lead" in c.lower() or "nome" in c.lower()]
+        nome_col = col_cliente[0] if col_cliente else df_master.columns[0]
+        
         primeiro_nome = nome_lead_limpo.split()[0].lower() if nome_lead_limpo else ""
-        match = df_master[df_master["Cliente"].astype(str).str.lower().str.contains(primeiro_nome, na=False)] if primeiro_nome else pd.DataFrame()
+        match = df_master[df_master[nome_col].astype(str).str.lower().str.contains(primeiro_nome, na=False)] if primeiro_nome else pd.DataFrame()
         
         if not match.empty:
-            status_master = match.iloc[0].get("Status", "Perdido")
-            closer_master = match.iloc[0].get("Closer", "Desconhecido")
-            objecao_master = match.iloc[0].get("Objeção / Obs.", match.iloc[0].get("Objeção", "Não registrada"))
+            # Tenta pegar as colunas de Status, Closer e Objeção
+            col_status = [c for c in df_master.columns if "status" in c.lower()]
+            col_closer = [c for c in df_master.columns if "closer" in c.lower()]
+            col_obj = [c for c in df_master.columns if "objeção" in c.lower() or "obs" in c.lower()]
+            
+            status_master = match.iloc[0].get(col_status[0], "Perdido") if col_status else "Perdido"
+            closer_master = match.iloc[0].get(col_closer[0], "Desconhecido") if col_closer else "Desconhecido"
+            objecao_master = match.iloc[0].get(col_obj[0], "Não registrada") if col_obj else "Não registrada"
 
     is_venda_confirmada = "ganho" in str(status_master).lower()
 

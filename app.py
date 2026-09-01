@@ -10,6 +10,46 @@ from googleapiclient.discovery import build
 
 st.set_page_config(page_title="Dashboard de Feedbacks - Sessão 1A1", page_icon="📊", layout="wide")
 
+# CSS para garantir que o texto dos cards do topo fiquem 100% legíveis e sem cortes (...)
+st.markdown("""
+    <style>
+    .metric-container {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+    .metric-card-custom {
+        background-color: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 12px;
+        flex: 1;
+        text-align: center;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+    }
+    .metric-card-title {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #475569;
+        margin-bottom: 4px;
+        white-space: nowrap;
+    }
+    .metric-card-value {
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: #0f172a;
+        line-height: 1.2;
+    }
+    .metric-card-sub {
+        font-size: 0.75rem;
+        color: #64748b;
+        margin-top: 4px;
+        font-weight: 500;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
 def remover_acentos(texto):
     if not isinstance(texto, str):
         return ""
@@ -28,7 +68,7 @@ openai_key = st.secrets.get("openai_api_key", "")
 id_agenda_secrets = st.secrets.get("google_calendar_id", "")
 ID_PLANILHA_REAL = "1LsWvNf3XBmmNnICtP2BLKl3-NN7yAIF2WV0pgqw3onU"
 
-# Sidebar - Configurações
+# Sidebar
 st.sidebar.header("⚙️ Configurações do App")
 if openai_key:
     st.sidebar.success("🔑 OpenAI API Key conectada!")
@@ -120,7 +160,7 @@ if st.sidebar.button("🔄 Sincronizar Agenda & Tabela Master", use_container_wi
         st.sidebar.error(f"Erro ao sincronizar: {str(e)}")
 
 # -------------------------------------------------------------
-# 1. CARDS DE DESEMPENHO E CONVERSÃO
+# 1. CARDS DE DESEMPENHO E CONVERSÃO (LAYOUT SEM CORTES)
 # -------------------------------------------------------------
 historico = st.session_state["historico_analises"]
 total_periodo = len(st.session_state["eventos_carregados"])
@@ -135,15 +175,15 @@ media_nota = (sum(item.get("nota", 0.0) for item in historico) / total_analisada
 
 col1, col2, col3, col4, col5 = st.columns(5)
 with col1:
-    st.metric("📅 Sessões Agendadas", f"{total_periodo}")
+    st.markdown(f'<div class="metric-card-custom"><div class="metric-card-title">📅 Sessões Agendadas</div><div class="metric-card-value">{total_periodo}</div></div>', unsafe_allow_html=True)
 with col2:
-    st.metric("📊 Auditadas pela IA", f"{total_analisadas}")
+    st.markdown(f'<div class="metric-card-custom"><div class="metric-card-title">📊 Auditadas pela IA</div><div class="metric-card-value">{total_analisadas}</div></div>', unsafe_allow_html=True)
 with col3:
-    st.metric("🟢 Convertidos (Ato/FUP)", f"{total_convertidos} ({vendas_ato} Ato | {vendas_fup} FUP)")
+    st.markdown(f'<div class="metric-card-custom"><div class="metric-card-title">🟢 Convertidos</div><div class="metric-card-value">{total_convertidos}</div><div class="metric-card-sub">{vendas_ato} Ato | {vendas_fup} FUP</div></div>', unsafe_allow_html=True)
 with col4:
-    st.metric("📈 Taxa de Conversão", f"{taxa_conversao:.1f}%")
+    st.markdown(f'<div class="metric-card-custom"><div class="metric-card-title">📈 Taxa de Conversão</div><div class="metric-card-value">{taxa_conversao:.1f}%</div></div>', unsafe_allow_html=True)
 with col5:
-    st.metric("⭐ Nota Média FHT", f"{media_nota:.1f} / 10.0")
+    st.markdown(f'<div class="metric-card-custom"><div class="metric-card-title">⭐ Nota Média FHT</div><div class="metric-card-value">{media_nota:.1f} / 10</div></div>', unsafe_allow_html=True)
 
 st.markdown("---")
 
@@ -182,7 +222,7 @@ if st.session_state["eventos_carregados"]:
     closer_master_auto = "Não identificado"
     objecao_master_auto = "Sem objeção registrada"
     
-    # BUSCA INTELIGENTE POR PROXIMIDADE DO NOME
+    # Busca na Planilha
     if not df_master.empty and "Cliente" in df_master.columns:
         lead_norm = remover_acentos(nome_lead_limpo)
         melhor_match = None
@@ -193,8 +233,6 @@ if st.session_state["eventos_carregados"]:
             cliente_norm = remover_acentos(cliente_planilha)
             
             score = similaridade(lead_norm, cliente_norm)
-            
-            # Se contiver o primeiro nome (ex: "anna" em "ana duran")
             primeiro_nome_agenda = lead_norm.split()[0] if lead_norm else ""
             if primeiro_nome_agenda and (primeiro_nome_agenda in cliente_norm or cliente_norm.startswith(primeiro_nome_agenda[:3])):
                 score += 0.4

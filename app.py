@@ -17,7 +17,6 @@ st.caption("Avaliador Inteligente de Chamadas High Ticket | Metodologia FHT (For
 openai_key = st.secrets.get("openai_api_key", "")
 id_agenda_secrets = st.secrets.get("google_calendar_id", "")
 
-# ID exato e fixo extraído da sua planilha da Ricarreira
 ID_PLANILHA_REAL = "1LsWvNf3XBmmNnICtP2BLKl3-NN7yAIF2WV0pgqw3onU"
 
 st.sidebar.header("⚙️ Configurações do App")
@@ -91,23 +90,29 @@ if st.sidebar.button("🔄 Sincronizar Agenda & Tabela Master"):
                 e for e in events if "diagnóstico gratuito de carreira" in e.get('summary', '').lower()
             ]
 
-            # 2. Busca Dados da Planilha Master Real
+            # 2. Busca Dados da Planilha Lendo Múltiplas Abas
             try:
                 service_sheets = build('sheets', 'v4', credentials=credentials)
                 
-                sheet_metadata = service_sheets.spreadsheets().get(spreadsheetId=ID_PLANILHA_REAL).execute()
-                sheets = sheet_metadata.get('sheets', [])
-                primeira_aba = sheets[0].get("properties", {}).get("title", "Base_Master") if sheets else "Base_Master"
+                # Tenta ler a aba 'Base_Master', se falhar tenta a primeira aba
+                try:
+                    sheet_result = service_sheets.spreadsheets().values().get(
+                        spreadsheetId=ID_PLANILHA_REAL, range="Base_Master!A1:Z1000"
+                    ).execute()
+                except:
+                    sheet_metadata = service_sheets.spreadsheets().get(spreadsheetId=ID_PLANILHA_REAL).execute()
+                    sheets = sheet_metadata.get('sheets', [])
+                    nome_aba = sheets[0].get("properties", {}).get("title", "Aba1") if sheets else "Aba1"
+                    sheet_result = service_sheets.spreadsheets().values().get(
+                        spreadsheetId=ID_PLANILHA_REAL, range=f"'{nome_aba}'!A1:Z1000"
+                    ).execute()
                 
-                sheet_result = service_sheets.spreadsheets().values().get(
-                    spreadsheetId=ID_PLANILHA_REAL, range=f"'{primeira_aba}'!A1:Z1000"
-                ).execute()
                 values = sheet_result.get('values', [])
                 if values:
                     df = pd.DataFrame(values[1:], columns=values[0])
                     st.session_state["dados_planilha"] = df
             except Exception as e_sheet:
-                st.sidebar.warning(f"Agenda OK, mas erro ao ler Planilha: {str(e_sheet)}")
+                st.sidebar.warning(f"Agenda OK, erro planilha: {str(e_sheet)}")
 
             st.sidebar.success(f"Encontrados {len(st.session_state['eventos_carregados'])} Diagnósticos!")
         else:
@@ -116,7 +121,7 @@ if st.sidebar.button("🔄 Sincronizar Agenda & Tabela Master"):
         st.sidebar.error(f"Erro ao sincronizar: {str(e)}")
 
 # -------------------------------------------------------------
-# CARDS GLOBAIS DE PERFORMANCE
+# CARDS GLOBAIS
 # -------------------------------------------------------------
 historico = st.session_state["historico_analises"]
 total_periodo = len(st.session_state["eventos_carregados"])
@@ -142,7 +147,7 @@ with col5:
 st.markdown("---")
 
 # -------------------------------------------------------------
-# SELEÇÃO E AUDITORIA
+# AUDITORIA
 # -------------------------------------------------------------
 st.subheader("📋 Auditar Reunião 1A1")
 
@@ -172,9 +177,9 @@ if st.session_state["eventos_carregados"]:
         descricao_evento = evento_obj.get("description", "")
         transcricao_texto = descricao_evento if descricao_evento.strip() else f"Sessão: {nome_lead_bruto}\nData: {evento_obj.get('start', {}).get('dateTime', '')}"
 
-    status_master = "Perdido"
-    closer_master = "Desconhecido"
-    objecao_master = "Não registrada"
+    status_master_auto = "Perdido"
+    closer_master_auto = "Ricardo"
+    objecao_master_auto = "Não registrada"
     
     if not df_master.empty:
         col_cliente = [c for c in df_master.columns if "cliente" in c.lower() or "lead" in c.lower() or "nome" in c.lower()]
@@ -188,21 +193,29 @@ if st.session_state["eventos_carregados"]:
             col_closer = [c for c in df_master.columns if "closer" in c.lower()]
             col_obj = [c for c in df_master.columns if "objeção" in c.lower() or "obs" in c.lower()]
             
-            status_master = match.iloc[0].get(col_status[0], "Perdido") if col_status else "Perdido"
-            closer_master = match.iloc[0].get(col_closer[0], "Desconhecido") if col_closer else "Desconhecido"
-            objecao_master = match.iloc[0].get(col_obj[0], "Não registrada") if col_obj else "Não registrada"
+            status_master_auto = match.iloc[0].get(col_status[0], "Perdido") if col_status else "Perdido"
+            closer_master_auto = match.iloc[0].get(col_closer[0], "Ricardo") if col_closer else "Ricardo"
+            objecao_master_auto = match.iloc[0].get(col_obj[0], "Não registrada") if col_obj else "Não registrada"
 
-    is_venda_confirmada = "ganho" in str(status_master).lower()
+    # Confirmação / Ajuste Manual de Segurança
+    col_st1, col_st2, col_st3 = st.columns(3)
+    with col_st1:
+        status_final = st.selectbox(
+            "Status da Venda (Confirmar):",
+            ["Ganho (Ato)", "Ganho (FUP)", "Perdido / Não Convertido"],
+            index=0 if "ato" in str(status_master_auto).lower() else (1 if "fup" in str(status_master_auto).lower() else 0)
+        )
+    with col_st2:
+        closer_final = st.text_input("Closer Responsável:", value=closer_master_auto if closer_master_auto != "None" else "Ricardo")
+    with col_st3:
+        objecao_final = st.text_input("Objeção do Lead:", value=objecao_master_auto if objecao_master_auto != "None" else "Nenhuma / Fechado")
+
+    is_venda_confirmada = "ganho" in str(status_final).lower()
 
     with col_btn:
         st.write(" ")
         st.write(" ")
         gerar_btn = st.button("🚀 Auditar com IA", use_container_width=True)
-
-    if is_venda_confirmada:
-        st.success(f"🟢 **STATUS CONVERTIDO ENCONTRADO NA PLANILHA MASTER:** `{status_master}` | **Closer:** `{closer_master}`")
-    else:
-        st.warning(f"📌 **Status na Tabela Master:** `{status_master}` | **Closer:** `{closer_master}` | **Objeção:** `{objecao_master}`")
 
     if gerar_btn:
         if not openai_key:
@@ -213,27 +226,22 @@ if st.session_state["eventos_carregados"]:
                     from openai import OpenAI
                     client = OpenAI(api_key=openai_key)
                     
-                    prompt_sistema = f"""Você é um auditor sênior de chamadas High Ticket da Ricarreira (programa CRH, fundado por Ricardo).
-Sua missão é auditar o desempenho do closer na sessão 1A1, utilizando a metodologia FHT (Formula High Ticket).
+                    if is_venda_confirmada:
+                        prompt_sistema = f"""Você é um auditor sênior de chamadas High Ticket da Ricarreira (programa CRH, fundado por Ricardo).
+Sua missão é auditar o desempenho do closer na sessão 1A1, utilizando a metodologia FHT.
 
-DADOS OFICIAIS REGISTRADOS DA BASE DE VENDAS:
-- Status Real Confirmado: {status_master}
-- É Venda Confirmada/Convertida? {'SIM' if is_venda_confirmada else 'NÃO'}
-- Closer Responsável: {closer_master}
-- Objeção Registrada: {objecao_master}
+ATENÇÃO: ESTA CHAMADA FOI UMA VENDA CONVERTIDA! ({status_final})
+- Closer Responsável: {closer_final}
+- Status: {status_final}
 
-REGRAS ABSOLUTAS E OBRIGATÓRIAS:
-1. IDENTIFICAÇÃO DE STATUS:
-   - Como o status oficial registrado é '{status_master}', você DEVE obrigatoriamente classificar esta chamada como LEAD CONVERTIDO!
-   - O primeiro item da sua resposta DEVE SER O STATUS DA SESSÃO em destaque:
-     `🟢 STATUS: LEAD CONVERTIDO ({status_master.upper()})`
+REGRAS ABSOLUTAS:
+1. O primeiro item da sua resposta DEVE SER O STATUS DESTACADO:
+   `🟢 STATUS: LEAD CONVERTIDO ({status_final.upper()})`
 
-2. LÓGICA DE NOTA:
-   - Por se tratar de um lead convertido, a nota final OBRIGATORIAMENTE DEVE SER ENTRE 8.0 E 10.0.
-   - Destaque os acertos do closer no fechamento e na condução do roteiro FHT.
+2. A nota final OBRIGATORIAMENTE DEVE SER ENTRE 8.0 E 10.0 (ex: 9.0/10). Elogie os pontos de sucesso do closer.
 
 ESTRUTURA DE RESPOSTA OBRIGATÓRIA (Markdown):
-### 🟢 STATUS: LEAD CONVERTIDO ({status_master.upper()})
+### 🟢 STATUS: LEAD CONVERTIDO ({status_final.upper()})
 
 **Resumo Executivo & Nota do Closer: [X.X / 10]**
 
@@ -241,13 +249,15 @@ ESTRUTURA DE RESPOSTA OBRIGATÓRIA (Markdown):
 - **🎯 Pontos Fortes da Sessão**
 - **🚨 Pontos de Melhoria Críticos**
 - **💡 Plano de Ação para o Próximo Treinamento**
-""" if is_venda_confirmada else f"""Você é um auditor sênior de chamadas High Ticket da Ricarreira (programa CRH).
+"""
+                    else:
+                        prompt_sistema = f"""Você é um auditor sênior de chamadas High Ticket da Ricarreira (programa CRH).
 Sua missão é auditar a chamada com a metodologia FHT.
 
 DADOS REGISTRADOS:
-- Status Real: {status_master}
-- Closer: {closer_master}
-- Objeção: {objecao_master}
+- Status Real: {status_final}
+- Closer: {closer_final}
+- Objeção: {objecao_final}
 
 ESTRUTURA DE RESPOSTA OBRIGATÓRIA:
 ### 🔴 STATUS: NÃO CONVERTIDO
@@ -270,7 +280,7 @@ ESTRUTURA DE RESPOSTA OBRIGATÓRIA:
                     )
                     
                     analise_ia = response.choices[0].message.content
-                    is_convertido_final = is_venda_confirmada or ("LEAD CONVERTIDO" in analise_ia)
+                    is_convertido_final = is_venda_confirmada
                     
                     match_nota = re.search(r"(\d+[\.,]?\d*)\s*/\s*10", analise_ia)
                     nota_extraida = float(match_nota.group(1).replace(",", ".")) if match_nota else (9.0 if is_convertido_final else 6.0)
@@ -278,10 +288,10 @@ ESTRUTURA DE RESPOSTA OBRIGATÓRIA:
                     st.session_state["historico_analises"].append({
                         "Data": evento_obj.get('start', {}).get('dateTime', '')[:10],
                         "Cliente": nome_lead_limpo,
-                        "Closer": closer_master,
-                        "status_venda": status_master,
-                        "Status": f"🟢 {status_master}" if is_convertido_final else "🔴 Perdido",
-                        "Objeção": objecao_master,
+                        "Closer": closer_final,
+                        "status_venda": status_final,
+                        "Status": f"🟢 {status_final}" if is_convertido_final else "🔴 Perdido",
+                        "Objeção": objecao_final,
                         "convertido": is_convertido_final,
                         "nota": nota_extraida,
                         "feedback_completo": analise_ia

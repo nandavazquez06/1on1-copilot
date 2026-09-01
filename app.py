@@ -10,38 +10,6 @@ from googleapiclient.discovery import build
 
 st.set_page_config(page_title="Dashboard de Feedbacks - Sessão 1A1", page_icon="📊", layout="wide")
 
-# CSS para métricas e badges sem corte
-st.markdown("""
-    <style>
-    .metric-card-custom {
-        background-color: #ffffff;
-        border: 1px solid #e2e8f0;
-        border-radius: 10px;
-        padding: 14px 12px;
-        text-align: center;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-    }
-    .metric-card-title {
-        font-size: 0.82rem;
-        font-weight: 700;
-        color: #475569;
-        margin-bottom: 6px;
-        text-transform: uppercase;
-    }
-    .metric-card-value {
-        font-size: 1.6rem;
-        font-weight: 800;
-        color: #0f172a;
-    }
-    .metric-card-sub {
-        font-size: 0.78rem;
-        color: #64748b;
-        margin-top: 4px;
-        font-weight: 500;
-    }
-    </style>
-""", unsafe_allow_html=True)
-
 def remover_acentos(texto):
     if not isinstance(texto, str):
         return ""
@@ -60,7 +28,7 @@ openai_key = st.secrets.get("openai_api_key", "")
 id_agenda_secrets = st.secrets.get("google_calendar_id", "")
 ID_PLANILHA_REAL = "1LsWvNf3XBmmNnICtP2BLKl3-NN7yAIF2WV0pgqw3onU"
 
-# Sidebar
+# Sidebar - Configurações
 st.sidebar.header("⚙️ Configurações do App")
 if openai_key:
     st.sidebar.success("🔑 OpenAI API Key conectada!")
@@ -152,7 +120,7 @@ if st.sidebar.button("🔄 Sincronizar Agenda & Tabela Master", use_container_wi
         st.sidebar.error(f"Erro ao sincronizar: {str(e)}")
 
 # -------------------------------------------------------------
-# CARDS GLOBAIS
+# 1. CARDS DE DESEMPENHO E CONVERSÃO
 # -------------------------------------------------------------
 historico = st.session_state["historico_analises"]
 total_periodo = len(st.session_state["eventos_carregados"])
@@ -160,7 +128,6 @@ total_analisadas = len(historico)
 
 vendas_ato = sum(1 for item in historico if "Ato" in str(item.get("status_venda", "")))
 vendas_fup = sum(1 for item in historico if "FUP" in str(item.get("status_venda", "")))
-total_perdidos = sum(1 for item in historico if "Perdido" in str(item.get("status_venda", "")))
 total_convertidos = vendas_ato + vendas_fup
 
 taxa_conversao = (total_convertidos / total_analisadas * 100) if total_analisadas > 0 else 0.0
@@ -168,20 +135,20 @@ media_nota = (sum(item.get("nota", 0.0) for item in historico) / total_analisada
 
 col1, col2, col3, col4, col5 = st.columns(5)
 with col1:
-    st.markdown(f'<div class="metric-card-custom"><div class="metric-card-title">📅 Sessões</div><div class="metric-card-value">{total_periodo}</div><div class="metric-card-sub">No período</div></div>', unsafe_allow_html=True)
+    st.metric("📅 Sessões Agendadas", f"{total_periodo}")
 with col2:
-    st.markdown(f'<div class="metric-card-custom"><div class="metric-card-title">📊 Auditadas</div><div class="metric-card-value">{total_analisadas}</div><div class="metric-card-sub">Pela IA</div></div>', unsafe_allow_html=True)
+    st.metric("📊 Auditadas pela IA", f"{total_analisadas}")
 with col3:
-    st.markdown(f'<div class="metric-card-custom"><div class="metric-card-title">🟢 Conversão</div><div class="metric-card-value">{total_convertidos}</div><div class="metric-card-sub">⚡ {vendas_ato} Ato | ⏳ {vendas_fup} FUP</div></div>', unsafe_allow_html=True)
+    st.metric("🟢 Convertidos (Ato/FUP)", f"{total_convertidos} ({vendas_ato} Ato | {vendas_fup} FUP)")
 with col4:
-    st.markdown(f'<div class="metric-card-custom"><div class="metric-card-title">📈 Taxa Conversão</div><div class="metric-card-value">{taxa_conversao:.1f}%</div><div class="metric-card-sub">🔴 {total_perdidos} Perdidos</div></div>', unsafe_allow_html=True)
+    st.metric("📈 Taxa de Conversão", f"{taxa_conversao:.1f}%")
 with col5:
-    st.markdown(f'<div class="metric-card-custom"><div class="metric-card-title">⭐ Média FHT</div><div class="metric-card-value">{media_nota:.1f}/10</div><div class="metric-card-sub">Nota média</div></div>', unsafe_allow_html=True)
+    st.metric("⭐ Nota Média FHT", f"{media_nota:.1f} / 10.0")
 
-st.markdown("<br>", unsafe_allow_html=True)
+st.markdown("---")
 
 # -------------------------------------------------------------
-# AUDITORIA
+# 2. AUDITORIA DA REUNIÃO
 # -------------------------------------------------------------
 st.subheader("📋 Auditar Reunião 1A1")
 
@@ -215,7 +182,7 @@ if st.session_state["eventos_carregados"]:
     closer_master_auto = "Não identificado"
     objecao_master_auto = "Sem objeção registrada"
     
-    # BUSCA INTELIGENTE POR SIMILARIDADE (Resolve 'Anna' vs 'Ana Duran')
+    # BUSCA INTELIGENTE POR PROXIMIDADE DO NOME
     if not df_master.empty and "Cliente" in df_master.columns:
         lead_norm = remover_acentos(nome_lead_limpo)
         melhor_match = None
@@ -223,14 +190,16 @@ if st.session_state["eventos_carregados"]:
 
         for idx, row in df_master.iterrows():
             cliente_planilha = str(row.get("Cliente", ""))
-            score = similaridade(lead_norm, cliente_planilha)
+            cliente_norm = remover_acentos(cliente_planilha)
             
-            # Se contiver o primeiro nome (ex: anna em ana duran)
+            score = similaridade(lead_norm, cliente_norm)
+            
+            # Se contiver o primeiro nome (ex: "anna" em "ana duran")
             primeiro_nome_agenda = lead_norm.split()[0] if lead_norm else ""
-            if primeiro_nome_agenda and primeiro_nome_agenda in remover_acentos(cliente_planilha):
-                score += 0.5
+            if primeiro_nome_agenda and (primeiro_nome_agenda in cliente_norm or cliente_norm.startswith(primeiro_nome_agenda[:3])):
+                score += 0.4
 
-            if score > maior_score and score > 0.4:
+            if score > maior_score and score > 0.35:
                 maior_score = score
                 melhor_match = row
 
@@ -239,24 +208,12 @@ if st.session_state["eventos_carregados"]:
             closer_master_auto = str(melhor_match.get("Closer", "Não identificado")).strip()
             objecao_master_auto = str(melhor_match.get("Objeção", "Sem objeção registrada")).strip()
 
-    # Mapeamento do índice do seletor
-    if "fup" in status_master_auto.lower():
-        idx_status = 1
-    elif "ato" in status_master_auto.lower() or "ganho" in status_master_auto.lower():
-        idx_status = 0
+    is_venda_confirmada = "ganho" in status_master_auto.lower()
+
+    if is_venda_confirmada:
+        st.success(f"🟢 **Status na Planilha Master:** `{status_master_auto}` | **Closer:** `{closer_master_auto}`")
     else:
-        idx_status = 2
-
-    # PERMITE AJUSTE VISUAL CASO A AGENDA ESTEJA ESCRITA DIFERENTE
-    c_st1, c_st2, c_st3 = st.columns(3)
-    with c_st1:
-        status_confirmado = st.selectbox("Status da Venda:", ["Ganho (Ato)", "Ganho (FUP)", "Perdido"], index=idx_status)
-    with c_st2:
-        closer_confirmado = st.text_input("Closer:", value=closer_master_auto)
-    with c_st3:
-        objecao_confirmada = st.text_input("Objeção:", value=objecao_master_auto)
-
-    is_venda_confirmada = "ganho" in status_confirmado.lower()
+        st.info(f"📌 **Status na Planilha Master:** `{status_master_auto}` | **Closer:** `{closer_master_auto}` | **Objeção:** `{objecao_master_auto}`")
 
     with col_btn:
         st.write(" ")
@@ -267,7 +224,7 @@ if st.session_state["eventos_carregados"]:
         if not openai_key:
             st.error("🔑 OpenAI API Key não encontrada.")
         else:
-            with st.spinner("🤖 Analisando reunião de acordo com a Metodologia FHT..."):
+            with st.spinner("🤖 Analisando reunião com base na Metodologia FHT..."):
                 try:
                     from openai import OpenAI
                     client = OpenAI(api_key=openai_key)
@@ -277,18 +234,18 @@ if st.session_state["eventos_carregados"]:
 Sua missão é auditar o desempenho do closer na sessão 1A1, utilizando a metodologia FHT.
 
 DADOS REGISTRADOS NA PLANILHA MASTER:
-- Status Real: {status_confirmado} (VENDA CONVERTIDA)
-- Closer Responsável: {closer_confirmado}
+- Status Real Confirmado: {status_master_auto} (VENDA CONVERTIDA)
+- Closer Responsável: {closer_master_auto}
 
 REGRAS OBRIGATÓRIAS:
 1. O primeiro item da sua resposta DEVE SER O STATUS DESTACADO:
-   `🟢 STATUS: LEAD CONVERTIDO ({status_confirmado.upper()})`
+   `🟢 STATUS: LEAD CONVERTIDO ({status_master_auto.upper()})`
 
-2. A nota final OBRIGATORIAMENTE DEVE SER ENTRE 8.0 E 10.0. 
-   Se for 'Ganho (FUP)', elogie a condução e o acompanhamento que levou o lead ao fechamento pós-sessão.
+2. A nota final OBRIGATORIAMENTE DEVE SER ENTRE 8.0 E 10.0.
+   Se for 'Ganho (FUP)', elogie a condução e o acompanhamento pós-sessão que levou o lead ao fechamento.
 
 ESTRUTURA DE RESPOSTA OBRIGATÓRIA (Markdown):
-### 🟢 STATUS: LEAD CONVERTIDO ({status_confirmado.upper()})
+### 🟢 STATUS: LEAD CONVERTIDO ({status_master_auto.upper()})
 
 **Resumo Executivo & Nota do Closer: [X.X / 10]**
 
@@ -303,8 +260,8 @@ Sua missão é auditar a chamada com a metodologia FHT.
 
 DADOS REGISTRADOS NA PLANILHA MASTER:
 - Status Real: Perdido
-- Closer Responsável: {closer_confirmado}
-- Objeção Registrada: {objecao_confirmada}
+- Closer Responsável: {closer_master_auto}
+- Objeção Registrada: {objecao_master_auto}
 
 ESTRUTURA DE RESPOSTA OBRIGATÓRIA:
 ### 🔴 STATUS: NÃO CONVERTIDO
@@ -335,9 +292,9 @@ ESTRUTURA DE RESPOSTA OBRIGATÓRIA:
                     st.session_state["historico_analises"].append({
                         "Data": evento_obj.get('start', {}).get('dateTime', '')[:10],
                         "Cliente": nome_lead_limpo,
-                        "Closer": closer_confirmado,
-                        "status_venda": status_confirmado,
-                        "Objeção": objecao_confirmada if not is_venda_confirmada else "Nenhuma / Fechado",
+                        "Closer": closer_master_auto,
+                        "status_venda": status_master_auto,
+                        "Objeção": objecao_master_auto if not is_venda_confirmada else "Nenhuma / Fechado",
                         "convertido": is_convertido_final,
                         "nota": nota_extraida,
                         "feedback_completo": analise_ia
@@ -354,7 +311,7 @@ else:
 st.markdown("---")
 
 # -------------------------------------------------------------
-# TABELA DE AUDITORIAS REALIZADAS
+# 3. TABELA DE AUDITORIAS REALIZADAS
 # -------------------------------------------------------------
 if historico:
     st.subheader("📑 Tabela de Auditorias Realizadas")

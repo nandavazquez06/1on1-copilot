@@ -8,6 +8,25 @@ from googleapiclient.discovery import build
 
 st.set_page_config(page_title="Dashboard de Feedbacks - Sessão 1A1", page_icon="📊", layout="wide")
 
+# Estilização CSS customizada para evitar cortes no layout
+st.markdown("""
+    <style>
+    /* Estilo dos cards de métricas para não cortar textos */
+    [data-testid="stMetricValue"] {
+        font-size: 1.8rem !important;
+    }
+    [data-testid="stMetricLabel"] {
+        font-size: 0.95rem !important;
+        font-weight: 600 !important;
+        color: #31333F !important;
+    }
+    .main .block-container {
+        padding-top: 2rem;
+        padding-bottom: 2rem;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
 if "historico_analises" not in st.session_state:
     st.session_state["historico_analises"] = []
 
@@ -16,9 +35,9 @@ st.caption("Avaliador Inteligente de Chamadas High Ticket | Metodologia FHT (For
 
 openai_key = st.secrets.get("openai_api_key", "")
 id_agenda_secrets = st.secrets.get("google_calendar_id", "")
-
 ID_PLANILHA_REAL = "1LsWvNf3XBmmNnICtP2BLKl3-NN7yAIF2WV0pgqw3onU"
 
+# Sidebar
 st.sidebar.header("⚙️ Configurações do App")
 if openai_key:
     st.sidebar.success("🔑 OpenAI API Key conectada!")
@@ -58,7 +77,7 @@ if "eventos_carregados" not in st.session_state:
 if "dados_planilha" not in st.session_state:
     st.session_state["dados_planilha"] = pd.DataFrame()
 
-if st.sidebar.button("🔄 Sincronizar Agenda & Tabela Master"):
+if st.sidebar.button("🔄 Sincronizar Agenda & Tabela Master", use_container_width=True):
     try:
         if "google_credentials" in st.secrets:
             creds_dict = dict(st.secrets["google_credentials"])
@@ -71,7 +90,7 @@ if st.sidebar.button("🔄 Sincronizar Agenda & Tabela Master"):
             ]
             credentials = service_account.Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
             
-            # 1. Busca Reuniões na Agenda
+            # 1. Busca Reuniões da Agenda
             service_cal = build('calendar', 'v3', credentials=credentials)
             time_min = datetime.datetime.combine(inicio_data, datetime.time.min).isoformat() + 'Z'
             time_max = datetime.datetime.combine(fim_data, datetime.time.max).isoformat() + 'Z'
@@ -94,25 +113,20 @@ if st.sidebar.button("🔄 Sincronizar Agenda & Tabela Master"):
             try:
                 service_sheets = build('sheets', 'v4', credentials=credentials)
                 
-                # Tenta ler a aba 'Base_Master', se falhar tenta a primeira aba
-                try:
-                    sheet_result = service_sheets.spreadsheets().values().get(
-                        spreadsheetId=ID_PLANILHA_REAL, range="Base_Master!A1:Z1000"
-                    ).execute()
-                except:
-                    sheet_metadata = service_sheets.spreadsheets().get(spreadsheetId=ID_PLANILHA_REAL).execute()
-                    sheets = sheet_metadata.get('sheets', [])
-                    nome_aba = sheets[0].get("properties", {}).get("title", "Aba1") if sheets else "Aba1"
-                    sheet_result = service_sheets.spreadsheets().values().get(
-                        spreadsheetId=ID_PLANILHA_REAL, range=f"'{nome_aba}'!A1:Z1000"
-                    ).execute()
+                sheet_metadata = service_sheets.spreadsheets().get(spreadsheetId=ID_PLANILHA_REAL).execute()
+                sheets = sheet_metadata.get('sheets', [])
+                nome_aba = sheets[0].get("properties", {}).get("title", "Base_Master") if sheets else "Base_Master"
+                
+                sheet_result = service_sheets.spreadsheets().values().get(
+                    spreadsheetId=ID_PLANILHA_REAL, range=f"'{nome_aba}'!A1:Z1000"
+                ).execute()
                 
                 values = sheet_result.get('values', [])
                 if values:
                     df = pd.DataFrame(values[1:], columns=values[0])
                     st.session_state["dados_planilha"] = df
             except Exception as e_sheet:
-                st.sidebar.warning(f"Agenda OK, erro planilha: {str(e_sheet)}")
+                st.sidebar.warning(f"Agenda OK, erro na planilha: {str(e_sheet)}")
 
             st.sidebar.success(f"Encontrados {len(st.session_state['eventos_carregados'])} Diagnósticos!")
         else:
@@ -121,7 +135,7 @@ if st.sidebar.button("🔄 Sincronizar Agenda & Tabela Master"):
         st.sidebar.error(f"Erro ao sincronizar: {str(e)}")
 
 # -------------------------------------------------------------
-# CARDS GLOBAIS
+# 1. CARDS GLOBAIS DE FEEDBACK & CONVERSÃO (SEM CORTES)
 # -------------------------------------------------------------
 historico = st.session_state["historico_analises"]
 total_periodo = len(st.session_state["eventos_carregados"])
@@ -138,7 +152,7 @@ with col1:
 with col2:
     st.metric("📊 Auditadas pela IA", f"{total_analisadas}")
 with col3:
-    st.metric("🟢 Vendas (Ato / FUP)", f"{total_convertidos} ({vendas_ato} Ato | {vendas_fup} FUP)")
+    st.metric("🟢 Convertidos (Ato / FUP)", f"{total_convertidos} ({vendas_ato} Ato | {vendas_fup} FUP)")
 with col4:
     st.metric("📈 Taxa de Conversão", f"{taxa_conversao:.1f}%")
 with col5:
@@ -147,7 +161,7 @@ with col5:
 st.markdown("---")
 
 # -------------------------------------------------------------
-# AUDITORIA
+# 2. SELEÇÃO DE REUNIÃO E CRUZAMENTO COM TABELA MASTER
 # -------------------------------------------------------------
 st.subheader("📋 Auditar Reunião 1A1")
 
@@ -185,9 +199,18 @@ if st.session_state["eventos_carregados"]:
         col_cliente = [c for c in df_master.columns if "cliente" in c.lower() or "lead" in c.lower() or "nome" in c.lower()]
         nome_col = col_cliente[0] if col_cliente else df_master.columns[0]
         
-        primeiro_nome = nome_lead_limpo.split()[0].lower() if nome_lead_limpo else ""
+        # Busca focado nos nomes da lead (ex: 'Ana Duran')
+        partes_nome = nome_lead_limpo.lower().split()
+        primeiro_nome = partes_nome[0] if partes_nome else ""
+        
         match = df_master[df_master[nome_col].astype(str).str.lower().str.contains(primeiro_nome, na=False)] if primeiro_nome else pd.DataFrame()
         
+        # Se houver mais de uma palavra no nome (ex: Ana Duran), tenta refinar a busca
+        if len(match) > 1 and len(partes_nome) > 1:
+            match_refinado = match[match[nome_col].astype(str).str.lower().str.contains(partes_nome[1], na=False)]
+            if not match_refinado.empty:
+                match = match_refinado
+
         if not match.empty:
             col_status = [c for c in df_master.columns if "status" in c.lower()]
             col_closer = [c for c in df_master.columns if "closer" in c.lower()]
@@ -197,18 +220,27 @@ if st.session_state["eventos_carregados"]:
             closer_master_auto = match.iloc[0].get(col_closer[0], "Ricardo") if col_closer else "Ricardo"
             objecao_master_auto = match.iloc[0].get(col_obj[0], "Não registrada") if col_obj else "Não registrada"
 
-    # Confirmação / Ajuste Manual de Segurança
+    # Define o índice padrão correto baseado no que veio da planilha
+    status_str_lower = str(status_master_auto).lower()
+    if "fup" in status_str_lower:
+        idx_padrao = 1
+    elif "ato" in status_str_lower or "ganho" in status_str_lower:
+        idx_padrao = 0
+    else:
+        idx_padrao = 2
+
+    # Campos de Confirmação Visuais
     col_st1, col_st2, col_st3 = st.columns(3)
     with col_st1:
         status_final = st.selectbox(
-            "Status da Venda (Confirmar):",
+            "Status da Venda (Master):",
             ["Ganho (Ato)", "Ganho (FUP)", "Perdido / Não Convertido"],
-            index=0 if "ato" in str(status_master_auto).lower() else (1 if "fup" in str(status_master_auto).lower() else 0)
+            index=idx_padrao
         )
     with col_st2:
-        closer_final = st.text_input("Closer Responsável:", value=closer_master_auto if closer_master_auto != "None" else "Ricardo")
+        closer_final = st.text_input("Closer Responsável:", value=closer_master_auto if str(closer_master_auto) != "None" else "Ricardo")
     with col_st3:
-        objecao_final = st.text_input("Objeção do Lead:", value=objecao_master_auto if objecao_master_auto != "None" else "Nenhuma / Fechado")
+        objecao_final = st.text_input("Objeção do Lead:", value=objecao_master_auto if str(objecao_master_auto) != "None" else "Nenhuma / Fechado")
 
     is_venda_confirmada = "ganho" in str(status_final).lower()
 
@@ -232,13 +264,14 @@ Sua missão é auditar o desempenho do closer na sessão 1A1, utilizando a metod
 
 ATENÇÃO: ESTA CHAMADA FOI UMA VENDA CONVERTIDA! ({status_final})
 - Closer Responsável: {closer_final}
-- Status: {status_final}
+- Status Registrado: {status_final}
 
 REGRAS ABSOLUTAS:
 1. O primeiro item da sua resposta DEVE SER O STATUS DESTACADO:
    `🟢 STATUS: LEAD CONVERTIDO ({status_final.upper()})`
 
-2. A nota final OBRIGATORIAMENTE DEVE SER ENTRE 8.0 E 10.0 (ex: 9.0/10). Elogie os pontos de sucesso do closer.
+2. A nota final OBRIGATORIAMENTE DEVE SER ENTRE 8.0 E 10.0 (ex: 9.0/10). 
+   Se for 'Ganho (FUP)', elogie a condução que manteve o lead engajado até o fechamento no acompanhamento.
 
 ESTRUTURA DE RESPOSTA OBRIGATÓRIA (Markdown):
 ### 🟢 STATUS: LEAD CONVERTIDO ({status_final.upper()})
@@ -307,10 +340,18 @@ else:
 
 st.markdown("---")
 
+# -------------------------------------------------------------
+# 3. TABELA DE AUDITORIAS (LAYOUT LIMPO E FORMATADO)
+# -------------------------------------------------------------
 if historico:
     st.subheader("📑 Tabela de Auditorias Realizadas")
     df_hist = pd.DataFrame(historico)
-    st.dataframe(df_hist[["Data", "Cliente", "Closer", "Status", "Objeção", "nota"]], use_container_width=True)
+    
+    # Renomeia colunas para exibição amigável
+    df_exibicao = df_hist[["Data", "Cliente", "Closer", "status_venda", "Objeção", "nota"]].copy()
+    df_exibicao.columns = ["Data", "Cliente", "Closer", "Status da Venda", "Objeção", "Nota FHT"]
+    
+    st.dataframe(df_exibicao, use_container_width=True)
 
     with st.expander("🔍 Ver Último Feedback Completo Gerado pela IA", expanded=True):
         st.markdown(historico[-1]["feedback_completo"])

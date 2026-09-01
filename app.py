@@ -66,7 +66,7 @@ if st.sidebar.button("🔄 Sincronizar Agenda & Tabela Master"):
         if "google_credentials" in st.secrets:
             creds_dict = dict(st.secrets["google_credentials"])
             if "private_key" in creds_dict:
-                creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
+                creds_dict["private_key"] = str(creds_dict["private_key"]).replace("\\n", "\n")
             
             SCOPES = [
                 'https://www.googleapis.com/auth/calendar.readonly',
@@ -93,9 +93,9 @@ if st.sidebar.button("🔄 Sincronizar Agenda & Tabela Master"):
                 e for e in events if "diagnóstico gratuito de carreira" in e.get('summary', '').lower()
             ]
 
-            # 2. Busca Dados da Tabela Master no Google Sheets
+            # 2. Busca Dados da Tabela Master no Google Sheets (Corrigido para 'v4')
             try:
-                service_sheets = build('sheets', '4', credentials=credentials)
+                service_sheets = build('sheets', 'v4', credentials=credentials)
                 sheet_result = service_sheets.spreadsheets().values().get(
                     spreadsheetId=ID_PLANILHA_PADRAO, range="Base_Master!A1:Z1000"
                 ).execute()
@@ -165,20 +165,18 @@ if st.session_state["eventos_carregados"]:
         evento_obj = opcoes_map[evento_sel_label]
         nome_lead_bruto = evento_obj.get('summary', '')
         
-        # Limpa o título para extrair apenas o nome do lead
+        # Extrai o nome do lead
         nome_lead_limpo = re.sub(r"(?i)diagnóstico\s+gratuito\s+de\s+carreira\s*[-–:]?", "", nome_lead_bruto).strip()
         descricao_evento = evento_obj.get("description", "")
         transcricao_texto = descricao_evento if descricao_evento.strip() else f"Sessão: {nome_lead_bruto}\nData: {evento_obj.get('start', {}).get('dateTime', '')}"
 
-    # Lógica de Cruzamento Flexível com a Tabela Master
+    # Lógica de Cruzamento com a Tabela Master
     status_master = "Perdido"
     closer_master = "Desconhecido"
     objecao_master = "Não registrada"
     
     if not df_master.empty and "Cliente" in df_master.columns:
-        # Tenta casar qualquer palavra relevante do nome do lead com a coluna Cliente
         primeiro_nome = nome_lead_limpo.split()[0].lower() if nome_lead_limpo else ""
-        
         match = df_master[df_master["Cliente"].astype(str).str.lower().str.contains(primeiro_nome, na=False)] if primeiro_nome else pd.DataFrame()
         
         if not match.empty:

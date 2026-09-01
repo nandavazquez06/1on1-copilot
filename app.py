@@ -10,21 +10,14 @@ from googleapiclient.discovery import build
 
 st.set_page_config(page_title="Dashboard de Feedbacks - Sessão 1A1", page_icon="📊", layout="wide")
 
-# CSS para garantir que o texto dos cards do topo fiquem 100% legíveis e sem cortes (...)
+# CSS Customizado
 st.markdown("""
     <style>
-    .metric-container {
-        display: flex;
-        justify-content: space-between;
-        gap: 12px;
-        margin-bottom: 20px;
-    }
     .metric-card-custom {
         background-color: #f8fafc;
         border: 1px solid #e2e8f0;
         border-radius: 8px;
         padding: 12px;
-        flex: 1;
         text-align: center;
         box-shadow: 0 1px 2px rgba(0,0,0,0.03);
     }
@@ -160,16 +153,23 @@ if st.sidebar.button("🔄 Sincronizar Agenda & Tabela Master", use_container_wi
         st.sidebar.error(f"Erro ao sincronizar: {str(e)}")
 
 # -------------------------------------------------------------
-# 1. CARDS DE DESEMPENHO E CONVERSÃO (LAYOUT SEM CORTES)
+# 1. CARDS DE DESEMPENHO E CONVERSÃO (DETECÇÃO FLEXÍVEL DE FUP)
 # -------------------------------------------------------------
 historico = st.session_state["historico_analises"]
 total_periodo = len(st.session_state["eventos_carregados"])
 total_analisadas = len(historico)
 
-vendas_ato = sum(1 for item in historico if "Ato" in str(item.get("status_venda", "")))
-vendas_fup = sum(1 for item in historico if "FUP" in str(item.get("status_venda", "")))
-total_convertidos = vendas_ato + vendas_fup
+vendas_ato = 0
+vendas_fup = 0
 
+for item in historico:
+    st_val = str(item.get("status_venda", "")).lower()
+    if "fup" in st_val or "follow" in st_val:
+        vendas_fup += 1
+    elif "ato" in st_val or "ganho" in st_val:
+        vendas_ato += 1
+
+total_convertidos = vendas_ato + vendas_fup
 taxa_conversao = (total_convertidos / total_analisadas * 100) if total_analisadas > 0 else 0.0
 media_nota = (sum(item.get("nota", 0.0) for item in historico) / total_analisadas) if total_analisadas > 0 else 0.0
 
@@ -185,16 +185,52 @@ with col4:
 with col5:
     st.markdown(f'<div class="metric-card-custom"><div class="metric-card-title">⭐ Nota Média FHT</div><div class="metric-card-value">{media_nota:.1f} / 10</div></div>', unsafe_allow_html=True)
 
+st.markdown("<br>", unsafe_allow_html=True)
+
+# -------------------------------------------------------------
+# 2. PERFORMANCE POR CLOSER (FERNANDA, RICARDO, RENATA)
+# -------------------------------------------------------------
+st.subheader("👥 Performance por Closer")
+
+closers_alvo = ["Fernanda", "Ricardo", "Renata"]
+df_master = st.session_state["dados_planilha"]
+
+dados_closers = []
+
+if not df_master.empty and "Closer" in df_master.columns and "Status" in df_master.columns:
+    for c in closers_alvo:
+        # Filtra os atendimentos do closer na planilha
+        sub_df = df_master[df_master["Closer"].astype(str).str.strip().str.lower() == c.lower()]
+        total_sessoes_c = len(sub_df)
+        
+        g_ato = sum(1 for s in sub_df["Status"].astype(str) if "ato" in s.lower())
+        g_fup = sum(1 for s in sub_df["Status"].astype(str) if "fup" in s.lower() or "follow" in s.lower())
+        tot_ganho = g_ato + g_fup
+        
+        taxa_c = (tot_ganho / total_sessoes_c * 100) if total_sessoes_c > 0 else 0.0
+        
+        dados_closers.append({
+            "Closer": c,
+            "Sessões na Planilha": total_sessoes_c,
+            "Ganho (Ato)": g_ato,
+            "Ganho (FUP)": g_fup,
+            "Total Convertido": tot_ganho,
+            "Taxa de Conversão (%)": f"{taxa_c:.1f}%"
+        })
+
+    st.dataframe(pd.DataFrame(dados_closers), use_container_width=True)
+else:
+    st.info("Sincronize a Tabela Master na barra lateral para ver o desempenho detalhado por closer.")
+
 st.markdown("---")
 
 # -------------------------------------------------------------
-# 2. AUDITORIA DA REUNIÃO
+# 3. AUDITORIA DA REUNIÃO
 # -------------------------------------------------------------
 st.subheader("📋 Auditar Reunião 1A1")
 
 if st.session_state["eventos_carregados"]:
     events = st.session_state["eventos_carregados"]
-    df_master = st.session_state["dados_planilha"]
     
     opcoes_map = {}
     for e in events:
@@ -222,7 +258,7 @@ if st.session_state["eventos_carregados"]:
     closer_master_auto = "Não identificado"
     objecao_master_auto = "Sem objeção registrada"
     
-    # Busca na Planilha
+    # Busca por Inteligência de Nomes (Fuzzy)
     if not df_master.empty and "Cliente" in df_master.columns:
         lead_norm = remover_acentos(nome_lead_limpo)
         melhor_match = None
@@ -280,7 +316,7 @@ REGRAS OBRIGATÓRIAS:
    `🟢 STATUS: LEAD CONVERTIDO ({status_master_auto.upper()})`
 
 2. A nota final OBRIGATORIAMENTE DEVE SER ENTRE 8.0 E 10.0.
-   Se for 'Ganho (FUP)', elogie a condução e o acompanhamento pós-sessão que levou o lead ao fechamento.
+   Se for 'Ganho (FUP)', elogie a condução comercial que manteve o lead engajado até o fechamento pós-sessão.
 
 ESTRUTURA DE RESPOSTA OBRIGATÓRIA (Markdown):
 ### 🟢 STATUS: LEAD CONVERTIDO ({status_master_auto.upper()})
@@ -349,7 +385,7 @@ else:
 st.markdown("---")
 
 # -------------------------------------------------------------
-# 3. TABELA DE AUDITORIAS REALIZADAS
+# 4. TABELA DE AUDITORIAS REALIZADAS
 # -------------------------------------------------------------
 if historico:
     st.subheader("📑 Tabela de Auditorias Realizadas")

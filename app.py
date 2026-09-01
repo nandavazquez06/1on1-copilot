@@ -10,14 +10,21 @@ from googleapiclient.discovery import build
 
 st.set_page_config(page_title="Dashboard de Feedbacks - Sessão 1A1", page_icon="📊", layout="wide")
 
-# CSS Customizado
+# CSS para garantir que o texto dos cards do topo fiquem 100% legíveis
 st.markdown("""
     <style>
+    .metric-container {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 20px;
+    }
     .metric-card-custom {
         background-color: #f8fafc;
         border: 1px solid #e2e8f0;
         border-radius: 8px;
         padding: 12px;
+        flex: 1;
         text-align: center;
         box-shadow: 0 1px 2px rgba(0,0,0,0.03);
     }
@@ -153,23 +160,16 @@ if st.sidebar.button("🔄 Sincronizar Agenda & Tabela Master", use_container_wi
         st.sidebar.error(f"Erro ao sincronizar: {str(e)}")
 
 # -------------------------------------------------------------
-# 1. CARDS DE DESEMPENHO E CONVERSÃO (DETECÇÃO FLEXÍVEL DE FUP)
+# 1. CARDS DE DESEMPENHO E CONVERSÃO
 # -------------------------------------------------------------
 historico = st.session_state["historico_analises"]
 total_periodo = len(st.session_state["eventos_carregados"])
 total_analisadas = len(historico)
 
-vendas_ato = 0
-vendas_fup = 0
-
-for item in historico:
-    st_val = str(item.get("status_venda", "")).lower()
-    if "fup" in st_val or "follow" in st_val:
-        vendas_fup += 1
-    elif "ato" in st_val or "ganho" in st_val:
-        vendas_ato += 1
-
+vendas_ato = sum(1 for item in historico if "Ato" in str(item.get("status_venda", "")))
+vendas_fup = sum(1 for item in historico if "FUP" in str(item.get("status_venda", "")))
 total_convertidos = vendas_ato + vendas_fup
+
 taxa_conversao = (total_convertidos / total_analisadas * 100) if total_analisadas > 0 else 0.0
 media_nota = (sum(item.get("nota", 0.0) for item in historico) / total_analisadas) if total_analisadas > 0 else 0.0
 
@@ -185,52 +185,16 @@ with col4:
 with col5:
     st.markdown(f'<div class="metric-card-custom"><div class="metric-card-title">⭐ Nota Média FHT</div><div class="metric-card-value">{media_nota:.1f} / 10</div></div>', unsafe_allow_html=True)
 
-st.markdown("<br>", unsafe_allow_html=True)
-
-# -------------------------------------------------------------
-# 2. PERFORMANCE POR CLOSER (FERNANDA, RICARDO, RENATA)
-# -------------------------------------------------------------
-st.subheader("👥 Performance por Closer")
-
-closers_alvo = ["Fernanda", "Ricardo", "Renata"]
-df_master = st.session_state["dados_planilha"]
-
-dados_closers = []
-
-if not df_master.empty and "Closer" in df_master.columns and "Status" in df_master.columns:
-    for c in closers_alvo:
-        # Filtra os atendimentos do closer na planilha
-        sub_df = df_master[df_master["Closer"].astype(str).str.strip().str.lower() == c.lower()]
-        total_sessoes_c = len(sub_df)
-        
-        g_ato = sum(1 for s in sub_df["Status"].astype(str) if "ato" in s.lower())
-        g_fup = sum(1 for s in sub_df["Status"].astype(str) if "fup" in s.lower() or "follow" in s.lower())
-        tot_ganho = g_ato + g_fup
-        
-        taxa_c = (tot_ganho / total_sessoes_c * 100) if total_sessoes_c > 0 else 0.0
-        
-        dados_closers.append({
-            "Closer": c,
-            "Sessões na Planilha": total_sessoes_c,
-            "Ganho (Ato)": g_ato,
-            "Ganho (FUP)": g_fup,
-            "Total Convertido": tot_ganho,
-            "Taxa de Conversão (%)": f"{taxa_c:.1f}%"
-        })
-
-    st.dataframe(pd.DataFrame(dados_closers), use_container_width=True)
-else:
-    st.info("Sincronize a Tabela Master na barra lateral para ver o desempenho detalhado por closer.")
-
 st.markdown("---")
 
 # -------------------------------------------------------------
-# 3. AUDITORIA DA REUNIÃO
+# 2. AUDITORIA DA REUNIÃO
 # -------------------------------------------------------------
 st.subheader("📋 Auditar Reunião 1A1")
 
 if st.session_state["eventos_carregados"]:
     events = st.session_state["eventos_carregados"]
+    df_master = st.session_state["dados_planilha"]
     
     opcoes_map = {}
     for e in events:
@@ -258,7 +222,7 @@ if st.session_state["eventos_carregados"]:
     closer_master_auto = "Não identificado"
     objecao_master_auto = "Sem objeção registrada"
     
-    # Busca por Inteligência de Nomes (Fuzzy)
+    # Busca na Planilha
     if not df_master.empty and "Cliente" in df_master.columns:
         lead_norm = remover_acentos(nome_lead_limpo)
         melhor_match = None
@@ -298,54 +262,74 @@ if st.session_state["eventos_carregados"]:
         if not openai_key:
             st.error("🔑 OpenAI API Key não encontrada.")
         else:
-            with st.spinner("🤖 Analisando reunião com base na Metodologia FHT..."):
+            with st.spinner("🤖 Analisando reunião com base na Metodologia FHT e Treinamento de Vendas..."):
                 try:
                     from openai import OpenAI
                     client = OpenAI(api_key=openai_key)
                     
-                    if is_venda_confirmada:
-                        prompt_sistema = f"""Você é um auditor sênior de chamadas High Ticket da Ricarreira (programa CRH, fundado por Ricardo).
-Sua missão é auditar o desempenho do closer na sessão 1A1, utilizando a metodologia FHT.
+                    # PROMPT ATUALIZADO COM OS CONCEITOS DO TREINAMENTO DE VENDAS
+                    prompt_sistema_base = f"""Você é o Auditor Oficial e Head de QA da Ricarreira (programa CRH, fundado por Ricardo Batista).
+Sua missão é avaliar a performance do closer na sessão 1A1, utilizando rigorosamente a metodologia FHT e as diretrizes do Treinamento de Vendas Oficial da equipe.
 
-DADOS REGISTRADOS NA PLANILHA MASTER:
-- Status Real Confirmado: {status_master_auto} (VENDA CONVERTIDA)
+DIRETRIZES TÉCNICAS E ROTEIRO DO TREINAMENTO DE VENDAS RICARREIRA:
+
+1. ESTRUTURA E RITMO DA SESSÃO:
+   - A sessão ideal deve ser equilibrada em 3 blocos de ~20 minutos: Diagnóstico/Raio-X, Apresentação da Mentoria (CRH) e Pitch/Fechamento.
+   - Verifique se houve o "Acordo Inicial" no Raio X para o lead NÃO ficar justificando as notas de 0 a 10 (mantendo o processo objetivo).
+   - Verifique se os 5 macro-pilares foram avaliados: Currículo, LinkedIn, Entrevistas (incluindo uso de IA em processos e entrevistas com humanos), Aumento Salarial e Mentalidade.
+
+2. AVALIAÇÃO POR PILAR & ANCORAGEM:
+   - Mentalidade & Dedicação: Devem ter notas altas de autoconfiança para viabilizar a mentoria e identificar objeções ocultas (família, tempo, prioridade).
+   - Diagnóstico como Médico: O closer agiu como um médico prescrevendo a solução exata após identificar os gargalos reais?
+   - Transição do "Herói Relutante": O closer contou a história de por que o Ricardo "relutou" em criar a mentoria individualizada (diferença entre vender apenas um curso passivo vs. mentoria próxima de acompanhamento/direcionamento)?
+   - Venda de Pilares vs. Entregáveis: O closer vendeu primeiro o DIRECIOCANEMENTO (pré-ação) e ACOMPANHAMENTO (pós-ação/análise de resultados) antes de listar entregáveis e bônus?
+   - Calculadora 'Tempo é Dinheiro' & Custo de Oportunidade: O closer ancorou o valor mostrando quanto o lead adia/deixa na mesa por semana (ex: R$ 2.500/semana ou R$ 500/dia sem feedback)?
+
+3. PITCH, OBJEÇÕES E TEMPERAMENTOS:
+   - Vagas Limitadas (Cadeiras): O closer reforçou a escassez das vagas/cadeiras e fez o lead se vender para merecer uma delas?
+   - Entrada de R$ 500,00: O closer buscou o fechamento no ato focando no sinal inicial de R$ 500,00 para garantir a vaga?
+   - Contorno por Temperamento: A argumentação se adaptou ao perfil do lead? (Colérico = Ego/Superação; Melancólico = Segurança/Contrato/Garantia condicional de 51 dias; Sanguíneo = Conexão/Comunidade; Fleumático = Pressionar o custo da procrastinação).
+
+STATUS REGISTRADO NA PLANILHA MASTER:
+- Status Real da Planilha: {status_master_auto}
 - Closer Responsável: {closer_master_auto}
+- Objeção Identificada no CRM: {objecao_master_auto}
 
-REGRAS OBRIGATÓRIAS:
-1. O primeiro item da sua resposta DEVE SER O STATUS DESTACADO:
-   `🟢 STATUS: LEAD CONVERTIDO ({status_master_auto.upper()})`
+REGRAS RÍGIDAS DE NOTA & RESPOSTA:
+"""
 
-2. A nota final OBRIGATORIAMENTE DEVE SER ENTRE 8.0 E 10.0.
-   Se for 'Ganho (FUP)', elogie a condução comercial que manteve o lead engajado até o fechamento pós-sessão.
+                    if is_venda_confirmada:
+                        prompt_sistema = prompt_sistema_base + f"""
+- Esta sessão foi uma VENDA CONVERTIDA ({status_master_auto}).
+- A NOTA FINAL OBRIGATORIAMENTE DEVE SER ENTRE 8.0 E 10.0.
+- Se for 'Ganho (FUP)', reconheça a qualidade do roteiro e a eficácia na manutenção do engajamento do lead até o fechamento no acompanhamento.
 
 ESTRUTURA DE RESPOSTA OBRIGATÓRIA (Markdown):
 ### 🟢 STATUS: LEAD CONVERTIDO ({status_master_auto.upper()})
 
 **Resumo Executivo & Nota do Closer: [X.X / 10]**
+*(Avalie o desempenho do closer conectando o fechamento com a execução do roteiro FHT e conceitos do Treinamento de Vendas)*
 
 ---
-- **🎯 Pontos Fortes da Sessão**
-- **🚨 Pontos de Melhoria Críticos**
-- **💡 Plano de Ação para o Próximo Treinamento**
+- **🎯 Pontos Fortes da Sessão** *(Ex: Acordo inicial de notas, uso da Calculadora Tempo é Dinheiro, Narrativa do Herói Relutante, Venda de Pilares, etc.)*
+- **🚨 Pontos de Melhoria Críticos** *(O que faltou para o pitch ser ainda mais magistral)*
+- **💡 Plano de Ação para o Próximo Treinamento** *(Recomendações práticas e treinamentos de contorno por temperamento)*
 """
                     else:
-                        prompt_sistema = f"""Você é um auditor sênior de chamadas High Ticket da Ricarreira (programa CRH).
-Sua missão é auditar a chamada com a metodologia FHT.
+                        prompt_sistema = prompt_sistema_base + f"""
+- Esta sessão está registrada como NÃO CONVERTIDA (Perdido).
+- A NOTA FINAL DEVE SER ENTRE 0.0 E 7.9, refletindo falhas de condução no roteiro FHT, falta de ancoragem de tempo/dinheiro ou contorno fraco da objeção '{objecao_master_auto}'.
 
-DADOS REGISTRADOS NA PLANILHA MASTER:
-- Status Real: Perdido
-- Closer Responsável: {closer_master_auto}
-- Objeção Registrada: {objecao_master_auto}
-
-ESTRUTURA DE RESPOSTA OBRIGATÓRIA:
+ESTRUTURA DE RESPOSTA OBRIGATÓRIA (Markdown):
 ### 🔴 STATUS: NÃO CONVERTIDO
 
 **Resumo Executivo & Nota do Closer: [X.X / 10]**
+*(Apresente os gargalos exatos da chamada e onde o closer perdeu o controle da venda)*
 
 ---
-- **🎯 Pontos Fortes da Sessão**
-- **🚨 Pontos de Melhoria Críticos**
-- **💡 Plano de Ação para o Próximo Treinamento**
+- **🎯 Pontos Fortes da Sessão** *(Acolhimento, empatia ou aplicação de alguma etapa inicial)*
+- **🚨 Pontos de Melhoria Críticos** *(Onde falhou a ancoragem de valor, transição do herói relutante, sinal de R$ 500 ou fechamento)*
+- **💡 Plano de Ação para o Próximo Treinamento** *(Como treinar a objeção '{objecao_master_auto}' e conduzir nos próximos diagnósticos)*
 """
                     
                     response = client.chat.completions.create(
@@ -385,7 +369,7 @@ else:
 st.markdown("---")
 
 # -------------------------------------------------------------
-# 4. TABELA DE AUDITORIAS REALIZADAS
+# 3. TABELA DE AUDITORIAS REALIZADAS
 # -------------------------------------------------------------
 if historico:
     st.subheader("📑 Tabela de Auditorias Realizadas")

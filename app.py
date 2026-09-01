@@ -9,18 +9,16 @@ from googleapiclient.discovery import build
 
 st.set_page_config(page_title="Dashboard de Feedbacks - Sessão 1A1", page_icon="📊", layout="wide")
 
-# Inicialização do banco de histórico de auditorias
+# Inicialização do histórico
 if "historico_analises" not in st.session_state:
     st.session_state["historico_analises"] = []
 
 st.title("📊 Dashboard de Feedbacks - Sessão 1A1")
 st.caption("Avaliador Inteligente de Chamadas High Ticket | Metodologia FHT (Formula High Ticket)")
 
-# Puxa credenciais das Secrets
+# Credenciais
 openai_key = st.secrets.get("openai_api_key", "")
 id_agenda_secrets = st.secrets.get("google_calendar_id", "")
-
-# ID Padrão da Tabela Master Ricarreira
 ID_PLANILHA_PADRAO = "15EByU5f2Q_vX6L2mGkZ09jTh3J3aZJ3_G5eH9Wk8E"
 
 # Sidebar
@@ -106,7 +104,7 @@ if st.sidebar.button("🔄 Sincronizar Agenda & Tabela Master"):
                     df = pd.DataFrame(values[1:], columns=values[0])
                     st.session_state["dados_planilha"] = df
             except Exception as e_sheet:
-                st.sidebar.warning(f"Agenda sincronizada, mas não foi possível ler a Tabela Master: {str(e_sheet)}")
+                st.sidebar.warning(f"Agenda OK, mas erro ao ler Planilha Master: {str(e_sheet)}")
 
             st.sidebar.success(f"Encontrados {len(st.session_state['eventos_carregados'])} Diagnósticos!")
         else:
@@ -115,14 +113,14 @@ if st.sidebar.button("🔄 Sincronizar Agenda & Tabela Master"):
         st.sidebar.error(f"Erro ao sincronizar: {str(e)}")
 
 # -------------------------------------------------------------
-# 1. CARDS GLOBAIS DE FEEDBACK & CONVERSÃO (INCLUINDO FUP)
+# 1. CARDS GLOBAIS DE FEEDBACK & CONVERSÃO
 # -------------------------------------------------------------
 historico = st.session_state["historico_analises"]
 total_periodo = len(st.session_state["eventos_carregados"])
 total_analisadas = len(historico)
 vendas_ato = sum(1 for item in historico if "Ato" in str(item.get("status_venda", "")))
 vendas_fup = sum(1 for item in historico if "FUP" in str(item.get("status_venda", "")))
-total_convertidos = vendas_ato + vendas_fup
+total_convertidos = sum(1 for item in historico if item.get("convertido", False))
 taxa_conversao = (total_convertidos / total_analisadas * 100) if total_analisadas > 0 else 0.0
 media_nota = (sum(item.get("nota", 0.0) for item in historico) / total_analisadas) if total_analisadas > 0 else 0.0
 
@@ -141,7 +139,7 @@ with col5:
 st.markdown("---")
 
 # -------------------------------------------------------------
-# 2. SELEÇÃO DE REUNIÃO E INTEGRALIZAÇÃO DA TABELA MASTER
+# 2. SELEÇÃO DE REUNIÃO E BUSCA AVANÇADA NA PLANILHA MASTER
 # -------------------------------------------------------------
 st.subheader("📋 Auditar Reunião 1A1")
 
@@ -165,58 +163,88 @@ if st.session_state["eventos_carregados"]:
     with col_sel:
         evento_sel_label = st.selectbox("Selecione o Diagnóstico para Auditar:", list(opcoes_map.keys()))
         evento_obj = opcoes_map[evento_sel_label]
-        nome_lead = evento_obj.get('summary', 'Diagnóstico Gratuito de Carreira')
+        nome_lead_bruto = evento_obj.get('summary', '')
+        
+        # Limpa o título para extrair apenas o nome do lead
+        nome_lead_limpo = re.sub(r"(?i)diagnóstico\s+gratuito\s+de\s+carreira\s*[-–:]?", "", nome_lead_bruto).strip()
         descricao_evento = evento_obj.get("description", "")
-        transcricao_texto = descricao_evento if descricao_evento.strip() else f"Sessão: {nome_lead}\nData: {evento_obj.get('start', {}).get('dateTime', '')}"
+        transcricao_texto = descricao_evento if descricao_evento.strip() else f"Sessão: {nome_lead_bruto}\nData: {evento_obj.get('start', {}).get('dateTime', '')}"
 
-    # Cruzamento automático com a Tabela Master pelo Nome do Lead
+    # Lógica de Cruzamento Flexível com a Tabela Master
     status_master = "Perdido"
     closer_master = "Desconhecido"
     objecao_master = "Não registrada"
     
     if not df_master.empty and "Cliente" in df_master.columns:
-        match = df_master[df_master["Cliente"].astype(str).str.lower().str.contains(nome_lead.lower().replace("diagnóstico gratuito de carreira -", "").strip(), na=False)]
+        # Tenta casar qualquer palavra relevante do nome do lead com a coluna Cliente
+        primeiro_nome = nome_lead_limpo.split()[0].lower() if nome_lead_limpo else ""
+        
+        match = df_master[df_master["Cliente"].astype(str).str.lower().str.contains(primeiro_nome, na=False)] if primeiro_nome else pd.DataFrame()
+        
         if not match.empty:
             status_master = match.iloc[0].get("Status", "Perdido")
             closer_master = match.iloc[0].get("Closer", "Desconhecido")
             objecao_master = match.iloc[0].get("Objeção / Obs.", match.iloc[0].get("Objeção", "Não registrada"))
+
+    is_venda_confirmada = "ganho" in str(status_master).lower()
 
     with col_btn:
         st.write(" ")
         st.write(" ")
         gerar_btn = st.button("🚀 Auditar com IA", use_container_width=True)
 
-    st.info(f"📌 **Status Tabela Master:** `{status_master}` | **Closer:** `{closer_master}` | **Objeção Registrar:** `{objecao_master}`")
+    if is_venda_confirmada:
+        st.success(f"🟢 **STATUS CONVERTIDO ENCONTRADO NA PLANILHA MASTER:** `{status_master}` | **Closer:** `{closer_master}`")
+    else:
+        st.warning(f"📌 **Status na Tabela Master:** `{status_master}` | **Closer:** `{closer_master}` | **Objeção:** `{objecao_master}`")
 
     if gerar_btn:
         if not openai_key:
             st.error("🔑 OpenAI API Key não encontrada.")
         else:
-            with st.spinner("🤖 Analisando reunião e cruzando com o status da Tabela Master..."):
+            with st.spinner("🤖 Analisando reunião com regras estritas de conversão..."):
                 try:
                     from openai import OpenAI
                     client = OpenAI(api_key=openai_key)
                     
-                    prompt_sistema = f"""Você é um auditor sênior de chamadas High Ticket da Ricarreira (programa CRH, fundado pelo especialista Ricardo).
+                    prompt_sistema = f"""Você é um auditor sênior de chamadas High Ticket da Ricarreira (programa CRH, fundado por Ricardo).
 Sua missão é auditar o desempenho do closer na sessão 1A1, utilizando a metodologia FHT (Formula High Ticket).
 
-DADOS DA TABELA MASTER:
-- Status Real da Lead: {status_master}
+DADOS OFICIAIS REGISTRADOS DA BASE DE VENDAS:
+- Status Real Confirmado: {status_master}
+- É Venda Confirmada/Convertida? {'SIM' if is_venda_confirmada else 'NÃO'}
 - Closer Responsável: {closer_master}
-- Objeção Registrada no CRM: {objecao_master}
+- Objeção Registrada: {objecao_master}
 
-REGRAS RÍGIDAS DE NOTA & CONVERSÃO:
+REGRAS ABSOLUTAS E OBRIGATÓRIAS:
 1. IDENTIFICAÇÃO DE STATUS:
-   - Se o Status na Tabela Master for 'Ganho (Ato)' ou 'Ganho (FUP)', a nota OBRIGATORIAMENTE DEVE SER ENTRE 8.0 E 10.0.
-   - Destaque no feedback se a conversão ocorreu no ato da reunião ou se foi um ganho via acompanhamento/follow-up (FUP).
-   - O primeiro item da resposta DEVE SER O STATUS DA SESSÃO em destaque:
-     `🟢 STATUS: LEAD CONVERTIDO (GANHO ATO)` ou `🟢 STATUS: LEAD CONVERTIDO (GANHO FUP)` ou `🔴 STATUS: NÃO CONVERTIDO`.
+   - Como o status oficial registrado é '{status_master}', você DEVE obrigatoriamente classificar esta chamada como LEAD CONVERTIDO!
+   - O primeiro item da sua resposta DEVE SER O STATUS DA SESSÃO em destaque:
+     `🟢 STATUS: LEAD CONVERTIDO ({status_master.upper()})`
 
-2. LÓGICA DE AVALIAÇÃO FHT:
-   - Avalie os pilares do roteiro: Diagnóstico, Ancoragem Acadêmica & LinkedIn, Calculadora 'Tempo é Dinheiro', Ancoragem Dupla de Preço e como a objeção '{objecao_master}' foi trabalhada.
+2. LÓGICA DE NOTA:
+   - Por se tratar de um lead convertido, a nota final OBRIGATORIAMENTE DEVE SER ENTRE 8.0 E 10.0.
+   - Destaque os acertos do closer no fechamento e na condução do roteiro FHT.
 
 ESTRUTURA DE RESPOSTA OBRIGATÓRIA (Markdown):
-### [STATUS DESTACADO]
+### 🟢 STATUS: LEAD CONVERTIDO ({status_master.upper()})
+
+**Resumo Executivo & Nota do Closer: [X.X / 10]**
+
+---
+- **🎯 Pontos Fortes da Sessão**
+- **🚨 Pontos de Melhoria Críticos**
+- **💡 Plano de Ação para o Próximo Treinamento**
+""" if is_venda_confirmada else f"""Você é um auditor sênior de chamadas High Ticket da Ricarreira (programa CRH).
+Sua missão é auditar a chamada com a metodologia FHT.
+
+DADOS REGISTRADOS:
+- Status Real: {status_master}
+- Closer: {closer_master}
+- Objeção: {objecao_master}
+
+ESTRUTURA DE RESPOSTA OBRIGATÓRIA:
+### 🔴 STATUS: NÃO CONVERTIDO
 
 **Resumo Executivo & Nota do Closer: [X.X / 10]**
 
@@ -230,25 +258,25 @@ ESTRUTURA DE RESPOSTA OBRIGATÓRIA (Markdown):
                         model="gpt-4o",
                         messages=[
                             {"role": "system", "content": prompt_sistema},
-                            {"role": "user", "content": f"Lead: {nome_lead}\nTranscrição/Dados:\n{transcricao_texto}"}
+                            {"role": "user", "content": f"Lead: {nome_lead_limpo}\nTranscrição/Dados:\n{transcricao_texto}"}
                         ],
                         temperature=0.3
                     )
                     
                     analise_ia = response.choices[0].message.content
-                    is_convertido = "LEAD CONVERTIDO" in analise_ia
+                    is_convertido_final = is_venda_confirmada or ("LEAD CONVERTIDO" in analise_ia)
                     
                     match_nota = re.search(r"(\d+[\.,]?\d*)\s*/\s*10", analise_ia)
-                    nota_extraida = float(match_nota.group(1).replace(",", ".")) if match_nota else (8.5 if is_convertido else 6.0)
+                    nota_extraida = float(match_nota.group(1).replace(",", ".")) if match_nota else (9.0 if is_convertido_final else 6.0)
 
                     st.session_state["historico_analises"].append({
                         "Data": evento_obj.get('start', {}).get('dateTime', '')[:10],
-                        "Cliente": nome_lead,
+                        "Cliente": nome_lead_limpo,
                         "Closer": closer_master,
                         "status_venda": status_master,
-                        "Status": f"🟢 {status_master}" if is_convertido else "🔴 Perdido",
+                        "Status": f"🟢 {status_master}" if is_convertido_final else "🔴 Perdido",
                         "Objeção": objecao_master,
-                        "convertido": is_convertido,
+                        "convertido": is_convertido_final,
                         "nota": nota_extraida,
                         "feedback_completo": analise_ia
                     })

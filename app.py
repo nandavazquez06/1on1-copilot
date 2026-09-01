@@ -3,24 +3,23 @@ import datetime
 import json
 import re
 import pandas as pd
-import plotly.express as px
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 
 st.set_page_config(page_title="Dashboard de Feedbacks - Sessão 1A1", page_icon="📊", layout="wide")
 
-# Inicialização do histórico
 if "historico_analises" not in st.session_state:
     st.session_state["historico_analises"] = []
 
 st.title("📊 Dashboard de Feedbacks - Sessão 1A1")
 st.caption("Avaliador Inteligente de Chamadas High Ticket | Metodologia FHT (Formula High Ticket)")
 
-# Credenciais
 openai_key = st.secrets.get("openai_api_key", "")
 id_agenda_secrets = st.secrets.get("google_calendar_id", "")
 
-# Sidebar
+# ID exato e fixo extraído da sua planilha da Ricarreira
+ID_PLANILHA_REAL = "1LsWvNf3XBmmNnICtP2BLKl3-NN7yAIF2WV0pgqw3onU"
+
 st.sidebar.header("⚙️ Configurações do App")
 if openai_key:
     st.sidebar.success("🔑 OpenAI API Key conectada!")
@@ -31,12 +30,6 @@ st.sidebar.markdown("---")
 st.sidebar.header("📅 Filtro por Período")
 
 email_equipe = st.sidebar.text_input("ID da Agenda da Equipe:", value=id_agenda_secrets)
-
-# ID da Planilha Master editável na sidebar
-id_planilha_input = st.sidebar.text_input(
-    "ID da Planilha Master (Google Sheets):",
-    value="15EByU5f2Q_vX6L2mGkZ09jTh3J3aZJ3_G5eH9Wk8E"
-)
 
 periodo_selecionado = st.sidebar.selectbox(
     "Selecione o Período:",
@@ -79,7 +72,7 @@ if st.sidebar.button("🔄 Sincronizar Agenda & Tabela Master"):
             ]
             credentials = service_account.Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
             
-            # 1. Busca Reuniões da Agenda
+            # 1. Busca Reuniões na Agenda
             service_cal = build('calendar', 'v3', credentials=credentials)
             time_min = datetime.datetime.combine(inicio_data, datetime.time.min).isoformat() + 'Z'
             time_max = datetime.datetime.combine(fim_data, datetime.time.max).isoformat() + 'Z'
@@ -98,25 +91,23 @@ if st.sidebar.button("🔄 Sincronizar Agenda & Tabela Master"):
                 e for e in events if "diagnóstico gratuito de carreira" in e.get('summary', '').lower()
             ]
 
-            # 2. Busca Dados da Planilha descobrindo a Primeira Aba Automática
-            if id_planilha_input.strip():
-                try:
-                    service_sheets = build('sheets', 'v4', credentials=credentials)
-                    
-                    # Puxa metadados da planilha para pegar o nome correto da primeira aba
-                    sheet_metadata = service_sheets.spreadsheets().get(spreadsheetId=id_planilha_input.strip()).execute()
-                    sheets = sheet_metadata.get('sheets', [])
-                    primeira_aba = sheets[0].get("properties", {}).get("title", "Aba1") if sheets else "Aba1"
-                    
-                    sheet_result = service_sheets.spreadsheets().values().get(
-                        spreadsheetId=id_planilha_input.strip(), range=f"'{primeira_aba}'!A1:Z1000"
-                    ).execute()
-                    values = sheet_result.get('values', [])
-                    if values:
-                        df = pd.DataFrame(values[1:], columns=values[0])
-                        st.session_state["dados_planilha"] = df
-                except Exception as e_sheet:
-                    st.sidebar.warning(f"Agenda OK, mas erro ao ler Planilha: {str(e_sheet)}")
+            # 2. Busca Dados da Planilha Master Real
+            try:
+                service_sheets = build('sheets', 'v4', credentials=credentials)
+                
+                sheet_metadata = service_sheets.spreadsheets().get(spreadsheetId=ID_PLANILHA_REAL).execute()
+                sheets = sheet_metadata.get('sheets', [])
+                primeira_aba = sheets[0].get("properties", {}).get("title", "Base_Master") if sheets else "Base_Master"
+                
+                sheet_result = service_sheets.spreadsheets().values().get(
+                    spreadsheetId=ID_PLANILHA_REAL, range=f"'{primeira_aba}'!A1:Z1000"
+                ).execute()
+                values = sheet_result.get('values', [])
+                if values:
+                    df = pd.DataFrame(values[1:], columns=values[0])
+                    st.session_state["dados_planilha"] = df
+            except Exception as e_sheet:
+                st.sidebar.warning(f"Agenda OK, mas erro ao ler Planilha: {str(e_sheet)}")
 
             st.sidebar.success(f"Encontrados {len(st.session_state['eventos_carregados'])} Diagnósticos!")
         else:
@@ -125,7 +116,7 @@ if st.sidebar.button("🔄 Sincronizar Agenda & Tabela Master"):
         st.sidebar.error(f"Erro ao sincronizar: {str(e)}")
 
 # -------------------------------------------------------------
-# 1. CARDS GLOBAIS DE FEEDBACK & CONVERSÃO
+# CARDS GLOBAIS DE PERFORMANCE
 # -------------------------------------------------------------
 historico = st.session_state["historico_analises"]
 total_periodo = len(st.session_state["eventos_carregados"])
@@ -151,7 +142,7 @@ with col5:
 st.markdown("---")
 
 # -------------------------------------------------------------
-# 2. SELEÇÃO DE REUNIÃO E CRUZAMENTO COM A TABELA MASTER
+# SELEÇÃO E AUDITORIA
 # -------------------------------------------------------------
 st.subheader("📋 Auditar Reunião 1A1")
 
@@ -181,13 +172,11 @@ if st.session_state["eventos_carregados"]:
         descricao_evento = evento_obj.get("description", "")
         transcricao_texto = descricao_evento if descricao_evento.strip() else f"Sessão: {nome_lead_bruto}\nData: {evento_obj.get('start', {}).get('dateTime', '')}"
 
-    # Lógica de Cruzamento com a Tabela Master
     status_master = "Perdido"
     closer_master = "Desconhecido"
     objecao_master = "Não registrada"
     
     if not df_master.empty:
-        # Tenta achar a coluna de nome do cliente (Cliente ou Lead ou Nome)
         col_cliente = [c for c in df_master.columns if "cliente" in c.lower() or "lead" in c.lower() or "nome" in c.lower()]
         nome_col = col_cliente[0] if col_cliente else df_master.columns[0]
         
@@ -195,7 +184,6 @@ if st.session_state["eventos_carregados"]:
         match = df_master[df_master[nome_col].astype(str).str.lower().str.contains(primeiro_nome, na=False)] if primeiro_nome else pd.DataFrame()
         
         if not match.empty:
-            # Tenta pegar as colunas de Status, Closer e Objeção
             col_status = [c for c in df_master.columns if "status" in c.lower()]
             col_closer = [c for c in df_master.columns if "closer" in c.lower()]
             col_obj = [c for c in df_master.columns if "objeção" in c.lower() or "obs" in c.lower()]
@@ -309,9 +297,6 @@ else:
 
 st.markdown("---")
 
-# -------------------------------------------------------------
-# 3. TABELA DE AUDITORIAS E FEEDBACK COMPLETO
-# -------------------------------------------------------------
 if historico:
     st.subheader("📑 Tabela de Auditorias Realizadas")
     df_hist = pd.DataFrame(historico)

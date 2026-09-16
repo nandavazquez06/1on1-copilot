@@ -188,7 +188,7 @@ with col5:
 st.markdown("---")
 
 # -------------------------------------------------------------
-# 2. AUDITORIA DA REUNIÃO (COM NOVO PROMPT OFICIAL)
+# 2. AUDITORIA DA REUNIÃO
 # -------------------------------------------------------------
 st.subheader("📋 Auditar Reunião 1A1")
 
@@ -267,16 +267,15 @@ if st.session_state["eventos_carregados"]:
                     from openai import OpenAI
                     client = OpenAI(api_key=openai_key)
                     
-                    # PROMPT INTEGRADO COM OS ROTEIROS OFICIAIS DOS 3 BLOCOS
                     prompt_sistema = f"""Você é o Auditor Sênior de Vendas da Ricarreira (programa CRH, fundado por Ricardo Batista).
-Sua missão é auditar meticulosamente a chamada 1A1 com base nos ROTEIROS OFICIAIS da empresa, divididos em 3 blocos bem definidos de 20 minutos.
+Sua missão é auditar meticulosamente a chamada 1A1 com base nos ROTEIROS OFICIAIS da empresa, divididos em 3 blocos de ~20 minutos.
 
 AVALIAÇÃO ESTRUTURAL POR BLOCOS:
 
 📍 BLOCO 1: DIAGNÓSTICO & RAIO-X (Minuto 0 ao 20)
-- Quebra-gelo & Acordo Inicial: Fez pergunta de conexão ("Como conheceu a Ricarreira?") e alinhou OBRIGATORIAMENTE para o lead NÃO justificar as notas de 0 a 10 (mantendo a reunião fluida e sem esticar demais)?
-- Raio-X dos 5 Pilares: Passou objetivamente por Currículo, LinkedIn, Entrevistas (investigando aprovações em Inteligência Artificial vs. RH Humano), Aumento Salarial e Mentalidade?
-- Escavação de Objeções: No pilar de Mentalidade, perguntou o "porquê" das notas menores que 10 para cavar travas de tempo, família e dedicação em 51 dias?
+- Quebra-gelo & Conexão: Fez pergunta de acolhimento ("Como conheceu a Ricarreira?")?
+- Acordo de Objetividade Flexível: Mencionar que a pessoa não precisa justificar todas as notas é uma boa prática para manter o controle do tempo, MAS O CLOSER TEM LIBERDADE PARA APROFUNDAR e perguntar "por quê" em notas chave quando quiser entender melhor o cenário e escavar dores. NÃO PUNIR O CLOSER por aprofundar respostas úteis. Só aponte como problema se a reunião estritamente Perder o controle e estourar o tempo por desvios irrelevantes do lead.
+- Raio-X dos 5 Pilares: Passou por Currículo, LinkedIn, Entrevistas (investigando aprovações em Inteligência Artificial vs. RH Humano), Aumento Salarial e Mentalidade?
 - Leitura do Gráfico: Compartilhou a tela mostrando APENAS o gráfico e utilizou a narrativa padronizada conectando que Mentalidade e Desejo de Salário só geram resultado se Currículo, LinkedIn e Entrevistas estiverem destravados? Encerrou perguntando se o lead concorda e quer mudar o cenário com urgência?
 
 📍 BLOCO 2: APRESENTAÇÃO DO PROGRAMA & SLIDES (Minuto 20 ao 40)
@@ -317,7 +316,7 @@ ESTRUTURA DE RESPOSTA OBRIGATÓRIA (Markdown):
 *(Avaliação geral da performance conectando o fechamento com o cumprimento dos roteiros oficiais dos 3 blocos)*
 
 ---
-- **🎯 Pontos Fortes da Sessão** *(Ex: Acordo inicial de objetividade, copy fluida do Herói Relutante, ancoragem Tempo é Dinheiro, foco na entrada de R$ 500)*
+- **🎯 Pontos Fortes da Sessão** *(Ex: Escavação inteligente de dores no Raio-X, copy fluida do Herói Relutante, ancoragem Tempo é Dinheiro, foco na entrada de R$ 500)*
 - **🚨 Pontos de Melhoria Críticos** *(Detalhes sutis onde o closer pode elevar ainda mais o padrão de execução)*
 - **💡 Plano de Ação para o Próximo Treinamento** *(Orientações de postura e fixação de roteiro)*
 """
@@ -334,7 +333,7 @@ ESTRUTURA DE RESPOSTA OBRIGATÓRIA (Markdown):
 
 ---
 - **🎯 Pontos Fortes da Sessão** *(Empatia, acolhimento ou bom preenchimento inicial do Raio-X)*
-- **🚨 Pontos de Melhoria Críticos** *(Onde falhou: justificativas no Raio-X, ausência do Herói Relutante, falta de confronto nas formações, cálculo do Tempo é Dinheiro ou vacilo no contorno da objeção de dinheiro/cônjuge)*
+- **🚨 Pontos de Melhoria Críticos** *(Onde falhou: ausência do Herói Relutante, falta de confronto nas formações, cálculo do Tempo é Dinheiro ou vacilo no contorno da objeção de dinheiro/cônjuge)*
 - **💡 Plano de Ação para o Próximo Treinamento** *(Treinamento prático e simulação exata para contornar a objeção '{objecao_master_auto}')*
 """
                     

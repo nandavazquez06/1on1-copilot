@@ -10,7 +10,7 @@ from googleapiclient.discovery import build
 
 st.set_page_config(page_title="Dashboard de Feedbacks - Sessão 1A1", page_icon="📊", layout="wide")
 
-# CSS para garantir que o texto dos cards do topo fiquem 100% legíveis
+# CSS para garantir que os cards e textos fiquem 100% legíveis sem cortes
 st.markdown("""
     <style>
     .metric-container {
@@ -188,7 +188,7 @@ with col5:
 st.markdown("---")
 
 # -------------------------------------------------------------
-# 2. AUDITORIA DA REUNIÃO
+# 2. AUDITORIA DA REUNIÃO (COM NOVO PROMPT OFICIAL)
 # -------------------------------------------------------------
 st.subheader("📋 Auditar Reunião 1A1")
 
@@ -222,7 +222,7 @@ if st.session_state["eventos_carregados"]:
     closer_master_auto = "Não identificado"
     objecao_master_auto = "Sem objeção registrada"
     
-    # Busca na Planilha
+    # Busca por Similaridade
     if not df_master.empty and "Cliente" in df_master.columns:
         lead_norm = remover_acentos(nome_lead_limpo)
         melhor_match = None
@@ -262,74 +262,80 @@ if st.session_state["eventos_carregados"]:
         if not openai_key:
             st.error("🔑 OpenAI API Key não encontrada.")
         else:
-            with st.spinner("🤖 Analisando reunião com base na Metodologia FHT e Treinamento de Vendas..."):
+            with st.spinner("🤖 Analisando reunião com base no Roteiro Oficial Ricarreira (Blocos 1, 2 e 3)..."):
                 try:
                     from openai import OpenAI
                     client = OpenAI(api_key=openai_key)
                     
-                    # PROMPT ATUALIZADO COM OS CONCEITOS DO TREINAMENTO DE VENDAS
-                    prompt_sistema_base = f"""Você é o Auditor Oficial e Head de QA da Ricarreira (programa CRH, fundado por Ricardo Batista).
-Sua missão é avaliar a performance do closer na sessão 1A1, utilizando rigorosamente a metodologia FHT e as diretrizes do Treinamento de Vendas Oficial da equipe.
+                    # PROMPT INTEGRADO COM OS ROTEIROS OFICIAIS DOS 3 BLOCOS
+                    prompt_sistema_base = f"""Você é o Auditor Sênior de Vendas da Ricarreira (programa CRH, fundado por Ricardo Batista).
+Sua missão é auditar meticulosamente a chamada 1A1 com base nos ROTEIROS OFICIAIS da empresa, divididos em 3 blocos bem definidos de 20 minutos.
 
-DIRETRIZES TÉCNICAS E ROTEIRO DO TREINAMENTO DE VENDAS RICARREIRA:
+AVALIAÇÃO ESTRUTURAL POR BLOCOS:
 
-1. ESTRUTURA E RITMO DA SESSÃO:
-   - A sessão ideal deve ser equilibrada em 3 blocos de ~20 minutos: Diagnóstico/Raio-X, Apresentação da Mentoria (CRH) e Pitch/Fechamento.
-   - Verifique se houve o "Acordo Inicial" no Raio X para o lead NÃO ficar justificando as notas de 0 a 10 (mantendo o processo objetivo).
-   - Verifique se os 5 macro-pilares foram avaliados: Currículo, LinkedIn, Entrevistas (incluindo uso de IA em processos e entrevistas com humanos), Aumento Salarial e Mentalidade.
+📍 BLOCO 1: DIAGNÓSTICO & RAIO-X (Minuto 0 ao 20)
+- Quebra-gelo & Acordo Inicial: Fez pergunta de conexão ("Como conheceu a Ricarreira?") e alinhou OBRIGATORIAMENTE para o lead NÃO justificar as notas de 0 a 10 (mantendo a reunião fluida e sem esticar demais)?
+- Raio-X dos 5 Pilares: Passou objetivamente por Currículo, LinkedIn, Entrevistas (investigando aprovações em Inteligência Artificial vs. RH Humano), Aumento Salarial e Mentalidade?
+- Escavação de Objeções: No pilar de Mentalidade, perguntou o "porquê" das notas menores que 10 para cavar travas de tempo, família e dedicação em 51 dias?
+- Leitura do Gráfico: Compartilhou a tela mostrando APENAS o gráfico e utilizou a narrativa padronizada conectando que Mentalidade e Desejo de Salário só geram resultado se Currículo, LinkedIn e Entrevistas estiverem destravados? Encerrou perguntando se o lead concorda e quer mudar o cenário com urgência?
 
-2. AVALIAÇÃO POR PILAR & ANCORAGEM:
-   - Mentalidade & Dedicação: Devem ter notas altas de autoconfiança para viabilizar a mentoria e identificar objeções ocultas (família, tempo, prioridade).
-   - Diagnóstico como Médico: O closer agiu como um médico prescrevendo a solução exata após identificar os gargalos reais?
-   - Transição do "Herói Relutante": O closer contou a história de por que o Ricardo "relutou" em criar a mentoria individualizada (diferença entre vender apenas um curso passivo vs. mentoria próxima de acompanhamento/direcionamento)?
-   - Venda de Pilares vs. Entregáveis: O closer vendeu primeiro o DIRECIOCANEMENTO (pré-ação) e ACOMPANHAMENTO (pós-ação/análise de resultados) antes de listar entregáveis e bônus?
-   - Calculadora 'Tempo é Dinheiro' & Custo de Oportunidade: O closer ancorou o valor mostrando quanto o lead adia/deixa na mesa por semana (ex: R$ 2.500/semana ou R$ 500/dia sem feedback)?
+📍 BLOCO 2: APRESENTAÇÃO DO PROGRAMA & SLIDES (Minuto 20 ao 40)
+- História do Herói Relutante: Utilizou a copy oficial explicando por que o Ricardo relutou em criar um programa individual ("Acompanhar é diferente de só ensinar", "Ouvir que precisavam se recolocar urgente", "Criar um acelerador de resultados")?
+- Escassez de Cadeiras: Avisou no início da apresentação que a Ricarreira abre apenas vagas/cadeiras limitadas por mês para manter a qualidade do grupo?
+- Apresentação de Pilares vs. Entregáveis: Apresentou os 4 pilares antes de listar entregáveis? (Direcionamento = pré-ação/marca pessoal; Acompanhamento = pós-ação/trava de entrevistas; Facilidades = App Ricarreira, filtro ATS, Controle de Vagas e Comunidade do Bem; Aumento Salarial = crescimento pós-recolocação).
+- Perguntas de Checagem: Fez as pausas de alinhamento ao longo dos slides ("Faz sentido?", "De 0 a 10 quanto tudo o que apresentei vai te ajudar na sua maior dificuldade hoje?")?
 
-3. PITCH, OBJEÇÕES E TEMPERAMENTOS:
-   - Vagas Limitadas (Cadeiras): O closer reforçou a escassez das vagas/cadeiras e fez o lead se vender para merecer uma delas?
-   - Entrada de R$ 500,00: O closer buscou o fechamento no ato focando no sinal inicial de R$ 500,00 para garantir a vaga?
-   - Contorno por Temperamento: A argumentação se adaptou ao perfil do lead? (Colérico = Ego/Superação; Melancólico = Segurança/Contrato/Garantia condicional de 51 dias; Sanguíneo = Conexão/Comunidade; Fleumático = Pressionar o custo da procrastinação).
+📍 BLOCO 3: PITCH, ANCORAGEM & QUEBRA DE OBJEÇÕES (Minuto 40 ao 60)
+- Merecimento da Cadeira: Perguntou "Por que uma dessas vagas deveria ser sua e não de outras pessoas interessadas?" para fazer o lead se vender para o programa?
+- Confronto de Formações (Slide 70): Ancorou confrontando os milhares de reais gastos em formações/cursos técnicos ao longo dos anos vs. zero investimento em carreira e postura de protagonista?
+- Calculadora Tempo é Dinheiro (Slide 71): Calculou a dor semanal e diária ("A cada semana sem direcionamento você perde R$ XXXX/semana e R$ XXX/dia deixando de ganhar sua pretensão")?
+- Foco Exclusivo na Entrada (R$ 500,00): Conduziu a oferta focando no valor acessível de R$ 500,00 para garantir a vaga agora, deixando o restante para alinhar em 1 semana?
+- Contorno Técnico de Objeções Específicas:
+  * "Preocupado com o pós/parcelas": Usou a lógica de retorno diário do novo emprego e o investimento na vida?
+  * "Preciso de um tempo para pensar": Lembrou do compromisso de ser uma pessoa dedicada e de palavra, mostrando o dinheiro perdido em mais 15 dias parado?
+  * "Preciso falar com cônjuge": Usou o reframe de que o parceiro(a) não entende a dor da busca (negativas na Gupy) e sugeriu dar os R$ 500 para ter mais confiança ao conversar?
+  * "E se não conseguir o emprego": Apresentou a Garantia Condicional de 1 Ano (colocando o risco nas costas da Ricarreira)?
 
 STATUS REGISTRADO NA PLANILHA MASTER:
-- Status Real da Planilha: {status_master_auto}
+- Status na Planilha: {status_master_auto}
 - Closer Responsável: {closer_master_auto}
-- Objeção Identificada no CRM: {objecao_master_auto}
+- Objeção no CRM: {objecao_master_auto}
 
 REGRAS RÍGIDAS DE NOTA & RESPOSTA:
 """
 
                     if is_venda_confirmada:
-                        prompt_sistema = prompt_sistema_base + f"""
+                        prompt_sistema += f"""
 - Esta sessão foi uma VENDA CONVERTIDA ({status_master_auto}).
 - A NOTA FINAL OBRIGATORIAMENTE DEVE SER ENTRE 8.0 E 10.0.
-- Se for 'Ganho (FUP)', reconheça a qualidade do roteiro e a eficácia na manutenção do engajamento do lead até o fechamento no acompanhamento.
+- Se for 'Ganho (FUP)', elogie a execução do roteiro FHT e o acompanhamento que sustentou o fechamento pós-sessão.
 
 ESTRUTURA DE RESPOSTA OBRIGATÓRIA (Markdown):
 ### 🟢 STATUS: LEAD CONVERTIDO ({status_master_auto.upper()})
 
 **Resumo Executivo & Nota do Closer: [X.X / 10]**
-*(Avalie o desempenho do closer conectando o fechamento com a execução do roteiro FHT e conceitos do Treinamento de Vendas)*
+*(Avaliação geral da performance conectando o fechamento com o cumprimento dos roteiros oficiais dos 3 blocos)*
 
 ---
-- **🎯 Pontos Fortes da Sessão** *(Ex: Acordo inicial de notas, uso da Calculadora Tempo é Dinheiro, Narrativa do Herói Relutante, Venda de Pilares, etc.)*
-- **🚨 Pontos de Melhoria Críticos** *(O que faltou para o pitch ser ainda mais magistral)*
-- **💡 Plano de Ação para o Próximo Treinamento** *(Recomendações práticas e treinamentos de contorno por temperamento)*
+- **🎯 Pontos Fortes da Sessão** *(Ex: Acordo inicial de objetividade, copy fluida do Herói Relutante, ancoragem Tempo é Dinheiro, foco na entrada de R$ 500)*
+- **🚨 Pontos de Melhoria Críticos** *(Detalhes sutis onde o closer pode elevar ainda mais o padrão de execução)*
+- **💡 Plano de Ação para o Próximo Treinamento** *(Orientações de postura e fixação de roteiro)*
 """
                     else:
-                        prompt_sistema = prompt_sistema_base + f"""
+                        prompt_sistema += f"""
 - Esta sessão está registrada como NÃO CONVERTIDA (Perdido).
-- A NOTA FINAL DEVE SER ENTRE 0.0 E 7.9, refletindo falhas de condução no roteiro FHT, falta de ancoragem de tempo/dinheiro ou contorno fraco da objeção '{objecao_master_auto}'.
+- A NOTA FINAL DEVE SER ENTRE 0.0 E 7.9, apontando onde o closer desviou do roteiro dos 3 blocos ou falhou no contorno da objeção '{objecao_master_auto}'.
 
 ESTRUTURA DE RESPOSTA OBRIGATÓRIA (Markdown):
 ### 🔴 STATUS: NÃO CONVERTIDO
 
 **Resumo Executivo & Nota do Closer: [X.X / 10]**
-*(Apresente os gargalos exatos da chamada e onde o closer perdeu o controle da venda)*
+*(Diagnóstico cirúrgico de onde a venda foi perdida e quais roteiros foram ignorados)*
 
 ---
-- **🎯 Pontos Fortes da Sessão** *(Acolhimento, empatia ou aplicação de alguma etapa inicial)*
-- **🚨 Pontos de Melhoria Críticos** *(Onde falhou a ancoragem de valor, transição do herói relutante, sinal de R$ 500 ou fechamento)*
-- **💡 Plano de Ação para o Próximo Treinamento** *(Como treinar a objeção '{objecao_master_auto}' e conduzir nos próximos diagnósticos)*
+- **🎯 Pontos Fortes da Sessão** *(Empatia, acolhimento ou bom preenchimento inicial do Raio-X)*
+- **🚨 Pontos de Melhoria Críticos** *(Onde falhou: justificativas no Raio-X, ausência do Herói Relutante, falta de confronto nas formações, cálculo do Tempo é Dinheiro ou vacilo no contorno da objeção de dinheiro/cônjuge)*
+- **💡 Plano de Ação para o Próximo Treinamento** *(Treinamento prático e simulação exata para contornar a objeção '{objecao_master_auto}')*
 """
                     
                     response = client.chat.completions.create(

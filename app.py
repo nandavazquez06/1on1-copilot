@@ -268,7 +268,7 @@ if st.session_state["eventos_carregados"]:
                     client = OpenAI(api_key=openai_key)
                     
                     # PROMPT INTEGRADO COM OS ROTEIROS OFICIAIS DOS 3 BLOCOS
-                    prompt_sistema_base = f"""Você é o Auditor Sênior de Vendas da Ricarreira (programa CRH, fundado por Ricardo Batista).
+                    prompt_sistema = f"""Você é o Auditor Sênior de Vendas da Ricarreira (programa CRH, fundado por Ricardo Batista).
 Sua missão é auditar meticulosamente a chamada 1A1 com base nos ROTEIROS OFICIAIS da empresa, divididos em 3 blocos bem definidos de 20 minutos.
 
 AVALIAÇÃO ESTRUTURAL POR BLOCOS:

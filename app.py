@@ -286,15 +286,17 @@ AVALIAÇÃO ESTRUTURAL POR BLOCOS:
 
 📍 BLOCO 3: PITCH, ANCORAGEM & QUEBRA DE OBJEÇÕES (Minuto 40 ao 60)
 - Merecimento da Cadeira: Perguntou "Por que uma dessas vagas deveria ser sua e não de outras pessoas interessadas?" para fazer o lead se vender para o programa?
-- DETECÇÃO DE CONFRONTO DE FORMAÇÕES (SLIDE 70) - REGRA DE DETECÇÃO FLEXÍVEL:
-  * ATENÇÃO: NÃO SEJA RÍGIDO COM PALAVRAS EXATAS. Se o closer perguntou ou discutiu quanto o lead já investiu em graduações, pós, MBAs ou cursos técnicos, ou perguntou o valor investido nas formações/LinkedIn para mostrar que faltava investir em CARREIRA/MENTALIDADE, CONSIDERE ESTA ETAPA COMO REALIZADA COM SUCESSO! NUNCA afirme que o confronto de formações não foi feito se houver qualquer menção a isso.
-- DETECÇÃO DA CALCULADORA "TEMPO É DINHEIRO" (SLIDE 71) - REGRA DE DETECÇÃO FLEXÍVEL:
-  * ATENÇÃO: NÃO EXIJA FRASES LITERAIS OU DADOS MATEMÁTICOS EXATOS. Se o closer abordou a pretensão salarial do lead, desdobrou os valores em ganho/perda anual, custo por semana (ex: R$ 2.500/semana ou "dinheiro deixado na mesa por semana sem feedback") ou custo diário (ex: R$ 500/dia), ou fez a reflexão sobre quanto se adia por continuar sem entrevistas, CONSIDERE A ANCORAGEM "TEMPO É DINHEIRO" COMO 100% REALIZADA! NUNCA afirme que o cálculo do Tempo é Dinheiro deixou de ser feito se houver discussão sobre o custo de oportunidade semanal/diário do lead.
+- DETECÇÃO DE CONFRONTO DE FORMAÇÕES (SLIDE 70) - REGRA FLEXÍVEL:
+  * Se o closer perguntou/discutiu quanto o lead já investiu em graduações, pós, MBAs ou cursos técnicos, ou perguntou o valor investido nas formações para mostrar que faltava investir em CARREIRA/MENTALIDADE, CONSIDERE ESTA ETAPA COMO REALIZADA COM SUCESSO!
+- DETECÇÃO DA CALCULADORA "TEMPO É DINHEIRO" (SLIDE 71) - REGRA FLEXÍVEL:
+  * Se o closer abordou a pretensão salarial, desdobrou valores em ganho/perda anual, custo por semana ou diário, ou fez a reflexão sobre quanto se adia por continuar sem entrevistas, CONSIDERE A ANCORAGEM "TEMPO É DINHEIRO" COMO 100% REALIZADA!
 - Foco Exclusivo na Entrada (R$ 500,00): Conduziu a oferta focando no valor acessível de R$ 500,00 para garantir a vaga agora, deixando o restante para alinhar em 1 semana?
-- Contorno Técnico de Objeções Específicas:
+- DETECÇÃO CONDICIONAL DA OBJEÇÃO DE CÔNJUGE/FAMÍLIA:
+  * ATENÇÃO CRÍTICA: A quebra de objeção do cônjuge/família É ESTRITAMENTE CONDICIONAL! Só avalie se o closer usou o reframe se o lead TIVER MENCIONADO EXPLÍCITAMENTE que precisa falar com marido, esposa, esposo, mulher, parceiro(a) ou família.
+  * SE O LEAD NÃO MENCIONOU CÔNJUGE/FAMÍLIA (ou se toma decisões de investimento de forma autônoma), NUNCA APONTE COMO FALHA OU PONTO DE MELHORIA que essa objeção deixou de ser contornada! Nesses casos, considere a condução do closer perfeita e alinhada ao roteiro padrão.
+- Contorno de Outras Objeções Específicas (Quando Aplicável):
   * "Preocupado com o pós/parcelas": Usou a lógica de retorno diário do novo emprego e o investimento na vida?
   * "Preciso de um tempo para pensar": Lembrou do compromisso de ser uma pessoa dedicada e de palavra, mostrando o dinheiro perdido em mais 15 dias parado?
-  * "Preciso falar com cônjuge": Usou o reframe de que o parceiro(a) não entende a dor da busca (negativas na Gupy) e sugeriu dar os R$ 500 para ter mais confiança ao conversar?
   * "E se não conseguir o emprego": Apresentou a Garantia Condicional de 1 Ano (colocando o risco nas costas da Ricarreira)?
 
 STATUS REGISTRADO NA PLANILHA MASTER:
@@ -325,7 +327,7 @@ ESTRUTURA DE RESPOSTA OBRIGATÓRIA (Markdown):
                     else:
                         prompt_sistema += f"""
 - Esta sessão está registrada como NÃO CONVERTIDA (Perdido).
-- A NOTA FINAL DEVE SER ENTRE 0.0 E 7.9, apontando onde o closer desviou do roteiro dos 3 blocos ou falhou no contorno da objeção '{objecao_master_auto}'.
+- A NOTA FINAL DEVE SER ENTRE 0.0 E 7.9, apontando onde o closer desviou do roteiro dos 3 blocos ou falhou no contorno da objeção real '{objecao_master_auto}'.
 
 ESTRUTURA DE RESPOSTA OBRIGATÓRIA (Markdown):
 ### 🔴 STATUS: NÃO CONVERTIDO
@@ -335,7 +337,7 @@ ESTRUTURA DE RESPOSTA OBRIGATÓRIA (Markdown):
 
 ---
 - **🎯 Pontos Fortes da Sessão** *(Empatia, acolhimento ou bom preenchimento inicial do Raio-X)*
-- **🚨 Pontos de Melhoria Críticos** *(Onde falhou: ausência do Herói Relutante ou vacilo no contorno da objeção de dinheiro/cônjuge)*
+- **🚨 Pontos de Melhoria Críticos** *(Onde falhou: ausência do Herói Relutante ou vacilo no contorno da objeção REAL apresentada pelo lead)*
 - **💡 Plano de Ação para o Próximo Treinamento** *(Treinamento prático e simulação exata para contornar a objeção '{objecao_master_auto}')*
 """
                     

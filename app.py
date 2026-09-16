@@ -286,7 +286,9 @@ AVALIAÇÃO ESTRUTURAL POR BLOCOS:
 
 📍 BLOCO 3: PITCH, ANCORAGEM & QUEBRA DE OBJEÇÕES (Minuto 40 ao 60)
 - Merecimento da Cadeira: Perguntou "Por que uma dessas vagas deveria ser sua e não de outras pessoas interessadas?" para fazer o lead se vender para o programa?
-- Confronto de Formações (Slide 70): Ancorou confrontando os milhares de reais gastos em formações/cursos técnicos ao longo dos anos vs. zero investimento em carreira e postura de protagonista?
+- DETECÇÃO DE CONFRONTO DE FORMAÇÕES (SLIDE 70) - REGRA DE DETECÇÃO FLEXÍVEL:
+  * ATENÇÃO: NÃO SEJA RÍGIDO COM PALAVRAS EXATAS. Se o closer perguntou ou discutiu quanto o lead já investiu em graduações, pós, MBAs ou cursos técnicos, ou perguntou o valor investido nas formações/LinkedIn para mostrar que faltava investir em CARREIRA/MENTALIDADE, CONSIDERE ESTA ETAPA COMO REALIZADA COM SUCESSO!
+  * NUNCA afirme que o confronto de formações não foi feito se houver qualquer pergunta sobre os investimentos prévios em estudo ou sobre focar na carreira.
 - Calculadora Tempo é Dinheiro (Slide 71): Calculou a dor semanal e diária ("A cada semana sem direcionamento você perde R$ XXXX/semana e R$ XXX/dia deixando de ganhar sua pretensão")?
 - Foco Exclusivo na Entrada (R$ 500,00): Conduziu a oferta focando no valor acessível de R$ 500,00 para garantir a vaga agora, deixando o restante para alinhar em 1 semana?
 - Contorno Técnico de Objeções Específicas:
@@ -316,7 +318,7 @@ ESTRUTURA DE RESPOSTA OBRIGATÓRIA (Markdown):
 *(Avaliação geral da performance conectando o fechamento com o cumprimento dos roteiros oficiais dos 3 blocos)*
 
 ---
-- **🎯 Pontos Fortes da Sessão** *(Ex: Escavação inteligente de dores no Raio-X, copy fluida do Herói Relutante, ancoragem Tempo é Dinheiro, foco na entrada de R$ 500)*
+- **🎯 Pontos Fortes da Sessão** *(Ex: Escavação inteligente de dores no Raio-X, copy fluida do Herói Relutante, ancoragem de formações e Tempo é Dinheiro, foco na entrada de R$ 500)*
 - **🚨 Pontos de Melhoria Críticos** *(Detalhes sutis onde o closer pode elevar ainda mais o padrão de execução)*
 - **💡 Plano de Ação para o Próximo Treinamento** *(Orientações de postura e fixação de roteiro)*
 """
@@ -333,7 +335,7 @@ ESTRUTURA DE RESPOSTA OBRIGATÓRIA (Markdown):
 
 ---
 - **🎯 Pontos Fortes da Sessão** *(Empatia, acolhimento ou bom preenchimento inicial do Raio-X)*
-- **🚨 Pontos de Melhoria Críticos** *(Onde falhou: ausência do Herói Relutante, falta de confronto nas formações, cálculo do Tempo é Dinheiro ou vacilo no contorno da objeção de dinheiro/cônjuge)*
+- **🚨 Pontos de Melhoria Críticos** *(Onde falhou: ausência do Herói Relutante, cálculo do Tempo é Dinheiro ou vacilo no contorno da objeção de dinheiro/cônjuge)*
 - **💡 Plano de Ação para o Próximo Treinamento** *(Treinamento prático e simulação exata para contornar a objeção '{objecao_master_auto}')*
 """
                     

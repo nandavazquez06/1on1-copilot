@@ -58,6 +58,51 @@ def remover_acentos(texto):
 def similaridade(a, b):
     return SequenceMatcher(None, remover_acentos(a), remover_acentos(b)).ratio()
 
+# FUNÇÕES OTIMIZADAS COM CACHE PARA ACELERAR O CARREGAMENTO
+@st.cache_resource(ttl=3600)
+def obter_credenciais_google(creds_dict_json):
+    creds_dict = json.loads(creds_dict_json)
+    if "private_key" in creds_dict:
+        creds_dict["private_key"] = str(creds_dict["private_key"]).replace("\\n", "\n")
+    SCOPES = [
+        'https://www.googleapis.com/auth/calendar.readonly',
+        'https://www.googleapis.com/auth/spreadsheets.readonly'
+    ]
+    return service_account.Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
+
+@st.cache_data(ttl=600, show_spinner=False)
+def buscar_dados_google(_credentials, email_equipe, inicio_data, fim_data, id_planilha):
+    # Google Calendar
+    service_cal = build('calendar', 'v3', credentials=_credentials)
+    time_min = datetime.datetime.combine(inicio_data, datetime.time.min).isoformat() + 'Z'
+    time_max = datetime.datetime.combine(fim_data, datetime.time.max).isoformat() + 'Z'
+    
+    events_result = service_cal.events().list(
+        calendarId=email_equipe,
+        timeMin=time_min,
+        timeMax=time_max,
+        q="Diagnóstico Gratuito de Carreira",
+        singleEvents=True,
+        orderBy='startTime'
+    ).execute()
+    events = events_result.get('items', [])
+    eventos_filtrados = [e for e in events if "diagnóstico gratuito de carreira" in e.get('summary', '').lower()]
+
+    # Google Sheets
+    df_planilha = pd.DataFrame()
+    try:
+        service_sheets = build('sheets', 'v4', credentials=_credentials)
+        sheet_result = service_sheets.spreadsheets().values().get(
+            spreadsheetId=id_planilha, range="Base_Master!A1:AA1000"
+        ).execute()
+        values = sheet_result.get('values', [])
+        if values:
+            df_planilha = pd.DataFrame(values[1:], columns=values[0])
+    except Exception:
+        pass
+
+    return eventos_filtrados, df_planilha
+
 if "historico_analises" not in st.session_state:
     st.session_state["historico_analises"] = []
 
@@ -111,47 +156,15 @@ if "dados_planilha" not in st.session_state:
 if st.sidebar.button("🔄 Sincronizar Agenda & Tabela Master", use_container_width=True):
     try:
         if "google_credentials" in st.secrets:
-            creds_dict = dict(st.secrets["google_credentials"])
-            if "private_key" in creds_dict:
-                creds_dict["private_key"] = str(creds_dict["private_key"]).replace("\\n", "\n")
+            creds_json = json.dumps(dict(st.secrets["google_credentials"]))
+            credentials = obter_credenciais_google(creds_json)
             
-            SCOPES = [
-                'https://www.googleapis.com/auth/calendar.readonly',
-                'https://www.googleapis.com/auth/spreadsheets.readonly'
-            ]
-            credentials = service_account.Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
-            
-            # Agenda
-            service_cal = build('calendar', 'v3', credentials=credentials)
-            time_min = datetime.datetime.combine(inicio_data, datetime.time.min).isoformat() + 'Z'
-            time_max = datetime.datetime.combine(fim_data, datetime.time.max).isoformat() + 'Z'
-            
-            events_result = service_cal.events().list(
-                calendarId=email_equipe,
-                timeMin=time_min,
-                timeMax=time_max,
-                q="Diagnóstico Gratuito de Carreira",
-                singleEvents=True,
-                orderBy='startTime'
-            ).execute()
-            events = events_result.get('items', [])
-            
-            st.session_state["eventos_carregados"] = [
-                e for e in events if "diagnóstico gratuito de carreira" in e.get('summary', '').lower()
-            ]
-
-            # Planilha Master
-            try:
-                service_sheets = build('sheets', 'v4', credentials=credentials)
-                sheet_result = service_sheets.spreadsheets().values().get(
-                    spreadsheetId=ID_PLANILHA_REAL, range="Base_Master!A1:AA1000"
-                ).execute()
-                values = sheet_result.get('values', [])
-                if values:
-                    df = pd.DataFrame(values[1:], columns=values[0])
-                    st.session_state["dados_planilha"] = df
-            except Exception as e_sheet:
-                st.sidebar.warning(f"Agenda OK, erro planilha: {str(e_sheet)}")
+            with st.spinner("⚡ Carregando dados da Agenda e Planilha..."):
+                # Limpa o cache para forçar a busca de dados novos
+                buscar_dados_google.clear()
+                eventos, df_planilha = buscar_dados_google(credentials, email_equipe, inicio_data, fim_data, ID_PLANILHA_REAL)
+                st.session_state["eventos_carregados"] = eventos
+                st.session_state["dados_planilha"] = df_planilha
 
             st.sidebar.success(f"Encontrados {len(st.session_state['eventos_carregados'])} Diagnósticos!")
         else:

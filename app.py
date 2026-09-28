@@ -8,9 +8,9 @@ from difflib import SequenceMatcher
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 
-st.set_page_config(page_title="Dashboard de Feedbacks - Sessão 1A1", page_icon="📊", layout="wide")
+st.set_page_config(page_title="Central do Closer - Sessão 1A1", page_icon="📊", layout="wide")
 
-# CSS para garantir que os cards e textos fiquem 100% legíveis sem cortes
+# CSS para garantir legibilidade e estilo moderno
 st.markdown("""
     <style>
     .metric-container {
@@ -47,6 +47,21 @@ st.markdown("""
         margin-top: 4px;
         font-weight: 500;
     }
+    .playbook-box {
+        background-color: #f1f5f9;
+        border-left: 4px solid #2563eb;
+        padding: 14px;
+        border-radius: 4px;
+        margin-bottom: 12px;
+    }
+    .playbook-script {
+        font-style: italic;
+        color: #1e293b;
+        background-color: #ffffff;
+        padding: 10px;
+        border-radius: 6px;
+        border: 1px solid #cbd5e1;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -58,7 +73,6 @@ def remover_acentos(texto):
 def similaridade(a, b):
     return SequenceMatcher(None, remover_acentos(a), remover_acentos(b)).ratio()
 
-# FUNÇÕES OTIMIZADAS COM CACHE PARA ACELERAR O CARREGAMENTO
 @st.cache_resource(ttl=3600)
 def obter_credenciais_google(creds_dict_json):
     creds_dict = json.loads(creds_dict_json)
@@ -72,7 +86,6 @@ def obter_credenciais_google(creds_dict_json):
 
 @st.cache_data(ttl=600, show_spinner=False)
 def buscar_dados_google(_credentials, email_equipe, inicio_data, fim_data, id_planilha):
-    # Google Calendar
     service_cal = build('calendar', 'v3', credentials=_credentials)
     time_min = datetime.datetime.combine(inicio_data, datetime.time.min).isoformat() + 'Z'
     time_max = datetime.datetime.combine(fim_data, datetime.time.max).isoformat() + 'Z'
@@ -88,7 +101,6 @@ def buscar_dados_google(_credentials, email_equipe, inicio_data, fim_data, id_pl
     events = events_result.get('items', [])
     eventos_filtrados = [e for e in events if "diagnóstico gratuito de carreira" in e.get('summary', '').lower()]
 
-    # Google Sheets
     df_planilha = pd.DataFrame()
     try:
         service_sheets = build('sheets', 'v4', credentials=_credentials)
@@ -106,14 +118,11 @@ def buscar_dados_google(_credentials, email_equipe, inicio_data, fim_data, id_pl
 if "historico_analises" not in st.session_state:
     st.session_state["historico_analises"] = []
 
-st.title("📊 Dashboard de Feedbacks - Sessão 1A1")
-st.caption("Avaliador Inteligente de Chamadas High Ticket | Metodologia FHT (Formula High Ticket)")
-
 openai_key = st.secrets.get("openai_api_key", "")
 id_agenda_secrets = st.secrets.get("google_calendar_id", "")
 ID_PLANILHA_REAL = "1LsWvNf3XBmmNnICtP2BLKl3-NN7yAIF2WV0pgqw3onU"
 
-# Sidebar
+# Sidebar - Configurações Gerais
 st.sidebar.header("⚙️ Configurações do App")
 if openai_key:
     st.sidebar.success("🔑 OpenAI API Key conectada!")
@@ -160,7 +169,6 @@ if st.sidebar.button("🔄 Sincronizar Agenda & Tabela Master", use_container_wi
             credentials = obter_credenciais_google(creds_json)
             
             with st.spinner("⚡ Carregando dados da Agenda e Planilha..."):
-                # Limpa o cache para forçar a busca de dados novos
                 buscar_dados_google.clear()
                 eventos, df_planilha = buscar_dados_google(credentials, email_equipe, inicio_data, fim_data, ID_PLANILHA_REAL)
                 st.session_state["eventos_carregados"] = eventos
@@ -172,235 +180,345 @@ if st.sidebar.button("🔄 Sincronizar Agenda & Tabela Master", use_container_wi
     except Exception as e:
         st.sidebar.error(f"Erro ao sincronizar: {str(e)}")
 
-# -------------------------------------------------------------
-# 1. CARDS DE DESEMPENHO E CONVERSÃO
-# -------------------------------------------------------------
-historico = st.session_state["historico_analises"]
-total_periodo = len(st.session_state["eventos_carregados"])
-total_analisadas = len(historico)
+# ESTRUTURA DE ABAS PRINCIPAIS DO APP
+tab1, tab2, tab3 = st.tabs([
+    "📚 Roteiros & Playbook de Bolso", 
+    "📊 Auditorias & Indicadores", 
+    "👥 Desempenho & Ranking por Closer"
+])
 
-vendas_ato = sum(1 for item in historico if "Ato" in str(item.get("status_venda", "")))
-vendas_fup = sum(1 for item in historico if "FUP" in str(item.get("status_venda", "")))
-total_convertidos = vendas_ato + vendas_fup
-
-taxa_conversao = (total_convertidos / total_analisadas * 100) if total_analisadas > 0 else 0.0
-media_nota = (sum(item.get("nota", 0.0) for item in historico) / total_analisadas) if total_analisadas > 0 else 0.0
-
-col1, col2, col3, col4, col5 = st.columns(5)
-with col1:
-    st.markdown(f'<div class="metric-card-custom"><div class="metric-card-title">📅 Sessões Agendadas</div><div class="metric-card-value">{total_periodo}</div></div>', unsafe_allow_html=True)
-with col2:
-    st.markdown(f'<div class="metric-card-custom"><div class="metric-card-title">📊 Auditadas pela IA</div><div class="metric-card-value">{total_analisadas}</div></div>', unsafe_allow_html=True)
-with col3:
-    st.markdown(f'<div class="metric-card-custom"><div class="metric-card-title">🟢 Convertidos</div><div class="metric-card-value">{total_convertidos}</div><div class="metric-card-sub">{vendas_ato} Ato | {vendas_fup} FUP</div></div>', unsafe_allow_html=True)
-with col4:
-    st.markdown(f'<div class="metric-card-custom"><div class="metric-card-title">📈 Taxa de Conversão</div><div class="metric-card-value">{taxa_conversao:.1f}%</div></div>', unsafe_allow_html=True)
-with col5:
-    st.markdown(f'<div class="metric-card-custom"><div class="metric-card-title">⭐ Nota Média FHT</div><div class="metric-card-value">{media_nota:.1f} / 10</div></div>', unsafe_allow_html=True)
-
-st.markdown("---")
-
-# -------------------------------------------------------------
-# 2. AUDITORIA DA REUNIÃO
-# -------------------------------------------------------------
-st.subheader("📋 Auditar Reunião 1A1")
-
-if st.session_state["eventos_carregados"]:
-    events = st.session_state["eventos_carregados"]
-    df_master = st.session_state["dados_planilha"]
+# =================================----------------=============
+# ABA 1: ROTEIROS & PLAYBOOK DE BOLSO
+# =================================----------------=============
+with tab1:
+    st.header("📖 Roteiro de Bolso - Sessão 1A1 High Ticket")
+    st.caption("Consulte as copys exatas, frases de alinhamento e reframes oficiais durante a chamada.")
     
-    opcoes_map = {}
-    for e in events:
-        nome = e.get('summary', 'Diagnóstico Gratuito de Carreira')
-        data = e.get('start', {}).get('dateTime', e.get('start', {}).get('date', ''))[:10]
-        try:
-            data_br = datetime.datetime.strptime(data, "%Y-%m-%d").strftime("%d/%m")
-        except:
-            data_br = data
-            
-        label = f"🗓️ [{data_br}] {nome}"
-        opcoes_map[label] = e
-
-    col_sel, col_btn = st.columns([3, 1])
-    with col_sel:
-        evento_sel_label = st.selectbox("Selecione o Diagnóstico para Auditar:", list(opcoes_map.keys()))
-        evento_obj = opcoes_map[evento_sel_label]
-        nome_lead_bruto = evento_obj.get('summary', '')
+    p_tab1, p_tab2, p_tab3 = st.tabs(["📍 Bloco 1: Diagnóstico & Raio-X", "📍 Bloco 2: Apresentação do Programa", "📍 Bloco 3: Fechamento & Objeções"])
+    
+    with p_tab1:
+        st.subheader("1. Acolhimento & Quebra-Gelo")
+        st.markdown("""
+        * **Pergunta Conexão:** *"Como você conheceu o Ricarreira?"* ou *"Já está aplicando o PRH?"*
+        * **Expectativa:** *"O que você espera deste momento? O que está buscando?"*
+        """)
         
-        nome_lead_limpo = re.sub(r"(?i)diagnóstico\s+gratuito\s+de\s+carreira\s*[-–:]?", "", nome_lead_bruto).strip()
-        descricao_evento = evento_obj.get("description", "")
-        transcricao_texto = descricao_evento if descricao_evento.strip() else f"Sessão: {nome_lead_bruto}\nData: {evento_obj.get('start', {}).get('dateTime', '')}"
+        st.subheader("2. Acordo de Objetividade (Alinhamento Inicial)")
+        st.markdown('<div class="playbook-box"><div class="playbook-script">"Eu vou te fazer algumas perguntas. Não precisa justificar o motivo da nota, só se eu te perguntar. Tudo bem? Mas um combinado: eu preciso que você seja BRUTALMENTE SINCERO. Posso confiar na sua palavra?"</div></div>', unsafe_allow_html=True)
+        st.info("💡 *Dica:* Você tem liberdade para aprofundar se identificar uma dor importante, mas o alinhamento inicial evita que a reunião estoure os 20 minutos.")
 
-    status_master_auto = "Perdido"
-    closer_master_auto = "Não identificado"
-    objecao_master_auto = "Sem objeção registrada"
+        st.subheader("3. Estrutura dos 5 Pilares do Raio-X")
+        st.markdown("""
+        1. **Currículo:** Métrica de convites por 10 CVs, aprovação em Gupy, ATS e indicação.
+        2. **LinkedIn:** Convites na semana, visualizações de perfil e abordagens.
+        3. **Entrevistas:** Aprovações por Inteligência Artificial (IA) vs. RH Humano, entrevistas técnicas/gestor e clareza de pretensão salarial.
+        4. **Aumento Salarial:** Plano claro para 6 meses, cases de lucro em 90 dias e recusa de tarefas operacionais.
+        5. **Mentalidade (Escavação de Objeções):** Prioridade de novo emprego, dedicação em 51 dias, família e compromisso de palavra.
+        """)
+        
+        st.subheader("4. Leitura do Gráfico de Radar")
+        st.markdown("""
+        * Compartilhe a tela exibindo **APENAS o gráfico**.
+        * **Narrativa Padrão:** *"O gráfico em azul é o ideal de 10 em tudo. Em vermelho é a média DAS NOTAS QUE VOCÊ DEU. Ele mostra que você tem Mentalidade e Desejo Salarial, mas nada disso gera resultado prático enquanto Currículo, LinkedIn e Entrevistas estiverem travados."*
+        * **Pergunta de Transição:** *"Faz sentido para você? Você quer mudar esse cenário urgentemente?"*
+        """)
+
+    with p_tab2:
+        st.subheader("1. História do Herói Relutante (Copy Oficial)")
+        st.markdown("""
+        <div class="playbook-box">
+        <div class="playbook-script">
+        "O Ricardo por muito tempo relutou em criar um programa de acompanhamento individual personalizado, porque acreditava que isso iria tomar muito tempo dele, e nós já temos um método que ajuda muitas pessoas. Mas o que preocupava ele era ter um monte de gente aplicando o método sem ter o acompanhamento necessário para aumentar a taxa de aprovação.<br><br>
+        Então o Ric entendeu que acompanhar é diferente de só ensinar. Ao ouvir das pessoas que elas precisavam se recolocar urgente, ele pensou: 'E se eu criasse um programa para realmente pegar a pessoa pela mão e ajudar a fazer o que precisa ser feito?'<br><br>
+        Como ele mesmo está em programas que aceleram resultados, ele criou esse Acelerador. Hoje nós só abrimos X cadeiras por mês para pessoas que selecionamos e achamos que o perfil faz sentido. Posso te mostrar como funciona?"
+        </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.subheader("2. Os 4 Pilares da Mentoria CRH")
+        st.markdown("""
+        * **Direcionamento (Pré-ação):** Plano de ação, ajuste estratégico de CV, LinkedIn e marca pessoal.
+        * **Acompanhamento (Pós-ação):** Análise de travas em entrevistas, simulados e negociação salarial.
+        * **Facilidades:** App Ricarreira, filtro ATS de vagas, Controle de Vagas e Comunidade do Bem no WhatsApp.
+        * **Aumento Salarial:** Acompanhamento para crescimento na carreira pós-recolocação.
+        """)
+
+    with p_tab3:
+        st.subheader("1. Ancoragens Obrigatórias do Pitch")
+        st.markdown("""
+        * **Confronto de Formações (Slide 70):** *"Quanto você já investiu em cursos técnicos/pós? E por que mesmo investindo R$ XXXX você continua sem o salário dos sonhos? Você nunca investiu na sua CARREIRA e Mentalidade."*
+        * **Calculadora Tempo é Dinheiro (Slide 71):** *"Com pretensão de R$ XXXX/mês, por ano você busca R$ XXXX. Cada semana sem direcionamento são R$ XXXX deixados na mesa. Por dia você perde R$ XXX. Está confortável em perder isso por mais uma semana?"*
+        * **Oferta na Entrada:** Foco absoluto nos **R$ 500,00 de sinal** para garantir a vaga agora (com saldo para 1 semana).
+        """)
+
+        st.subheader("2. Matadores de Objeções Específicas")
+        
+        st.markdown("**🔴 Objeção: 'Preciso falar com meu cônjuge / esposa / marido'**")
+        st.markdown('<div class="playbook-box"><div class="playbook-script">"Entendo, mas ele(a) não vive a sua dor diária de negativas na Gupy ou da busca sem retorno. É natural ele(a) achar caro se não entender a dor. Dando a entrada de R$ 500 hoje para garantir sua vaga, você entra no programa, ganha mais confiança e mostra o compromisso para depois conversarem com mais clareza."</div></div>', unsafe_allow_html=True)
+
+        st.markdown("**🔴 Objeção: 'Preciso pensar por causa do valor das parcelas no pós'**")
+        st.markdown('<div class="playbook-box"><div class="playbook-script">"Agora você só precisa focar nos R$ 500 que você já tem. No novo emprego você vai ganhar R$ XXX por dia, o que paga as parcelas com folga. Ficar mais 15 dias pensando significa jogar R$ XXXX fora. Vale a pena continuar perdendo esse dinheiro?"</div></div>', unsafe_allow_html=True)
+
+        st.markdown("**🔴 Objeção: 'E se eu investir e não conseguir o emprego?'**")
+        st.markdown('<div class="playbook-box"><div class="playbook-script">"Nós temos a Garantia Condicional de 1 Ano. O risco está 100% nas nossas costas, não nas suas. Se você seguir o passo a passo e não tiver resultado, devolvemos todo o seu dinheiro."</div></div>', unsafe_allow_html=True)
+
+# =================================----------------=============
+# ABA 2: AUDITORIAS & INDICADORES (TELA ATUAL)
+# =================================----------------=============
+with tab2:
+    st.header("📊 Painel Geral de Auditorias 1A1")
     
-    # Busca por Similaridade
-    if not df_master.empty and "Cliente" in df_master.columns:
-        lead_norm = remover_acentos(nome_lead_limpo)
-        melhor_match = None
-        maior_score = 0.0
+    historico = st.session_state["historico_analises"]
+    total_periodo = len(st.session_state["eventos_carregados"])
+    total_analisadas = len(historico)
 
-        for idx, row in df_master.iterrows():
-            cliente_planilha = str(row.get("Cliente", ""))
-            cliente_norm = remover_acentos(cliente_planilha)
+    vendas_ato = sum(1 for item in historico if "Ato" in str(item.get("status_venda", "")))
+    vendas_fup = sum(1 for item in historico if "FUP" in str(item.get("status_venda", "")))
+    total_convertidos = vendas_ato + vendas_fup
+
+    taxa_conversao = (total_convertidos / total_analisadas * 100) if total_analisadas > 0 else 0.0
+    media_nota = (sum(item.get("nota", 0.0) for item in historico) / total_analisadas) if total_analisadas > 0 else 0.0
+
+    col1, col2, col3, col4, col5 = st.columns(5)
+    with col1:
+        st.markdown(f'<div class="metric-card-custom"><div class="metric-card-title">📅 Sessões Agendadas</div><div class="metric-card-value">{total_periodo}</div></div>', unsafe_allow_html=True)
+    with col2:
+        st.markdown(f'<div class="metric-card-custom"><div class="metric-card-title">📊 Auditadas pela IA</div><div class="metric-card-value">{total_analisadas}</div></div>', unsafe_allow_html=True)
+    with col3:
+        st.markdown(f'<div class="metric-card-custom"><div class="metric-card-title">🟢 Convertidos</div><div class="metric-card-value">{total_convertidos}</div><div class="metric-card-sub">{vendas_ato} Ato | {vendas_fup} FUP</div></div>', unsafe_allow_html=True)
+    with col4:
+        st.markdown(f'<div class="metric-card-custom"><div class="metric-card-title">📈 Taxa de Conversão</div><div class="metric-card-value">{taxa_conversao:.1f}%</div></div>', unsafe_allow_html=True)
+    with col5:
+        st.markdown(f'<div class="metric-card-custom"><div class="metric-card-title">⭐ Nota Média FHT</div><div class="metric-card-value">{media_nota:.1f} / 10</div></div>', unsafe_allow_html=True)
+
+    st.markdown("---")
+
+    # Tabela Performance por Closer
+    st.subheader("👥 Performance Geral da Equipe de Closers")
+    closers_alvo = ["Fernanda", "Ricardo", "Renata"]
+    df_master = st.session_state["dados_planilha"]
+
+    dados_closers = []
+    if not df_master.empty and "Closer" in df_master.columns and "Status" in df_master.columns:
+        for c in closers_alvo:
+            sub_df = df_master[df_master["Closer"].astype(str).str.strip().str.lower() == c.lower()]
+            total_sessoes_c = len(sub_df)
+            g_ato = sum(1 for s in sub_df["Status"].astype(str) if "ato" in s.lower())
+            g_fup = sum(1 for s in sub_df["Status"].astype(str) if "fup" in s.lower() or "follow" in s.lower())
+            tot_ganho = g_ato + g_fup
+            taxa_c = (tot_ganho / total_sessoes_c * 100) if total_sessoes_c > 0 else 0.0
             
-            score = similaridade(lead_norm, cliente_norm)
-            primeiro_nome_agenda = lead_norm.split()[0] if lead_norm else ""
-            if primeiro_nome_agenda and (primeiro_nome_agenda in cliente_norm or cliente_norm.startswith(primeiro_nome_agenda[:3])):
-                score += 0.4
-
-            if score > maior_score and score > 0.35:
-                maior_score = score
-                melhor_match = row
-
-        if melhor_match is not None:
-            status_master_auto = str(melhor_match.get("Status", "Perdido")).strip()
-            closer_master_auto = str(melhor_match.get("Closer", "Não identificado")).strip()
-            objecao_master_auto = str(melhor_match.get("Objeção", "Sem objeção registrada")).strip()
-
-    is_venda_confirmada = "ganho" in status_master_auto.lower()
-
-    if is_venda_confirmada:
-        st.success(f"🟢 **Status na Planilha Master:** `{status_master_auto}` | **Closer:** `{closer_master_auto}`")
+            dados_closers.append({
+                "Closer": c,
+                "Sessões na Planilha": total_sessoes_c,
+                "Ganho (Ato)": g_ato,
+                "Ganho (FUP)": g_fup,
+                "Total Convertido": tot_ganho,
+                "Taxa de Conversão (%)": f"{taxa_c:.1f}%"
+            })
+        st.dataframe(pd.DataFrame(dados_closers), use_container_width=True)
     else:
-        st.info(f"📌 **Status na Planilha Master:** `{status_master_auto}` | **Closer:** `{closer_master_auto}` | **Objeção:** `{objecao_master_auto}`")
+        st.info("Clique em 'Sincronizar Agenda & Tabela Master' na barra lateral para carregar a performance.")
 
-    with col_btn:
-        st.write(" ")
-        st.write(" ")
-        gerar_btn = st.button("🚀 Auditar com IA", use_container_width=True)
+    st.markdown("---")
 
-    if gerar_btn:
-        if not openai_key:
-            st.error("🔑 OpenAI API Key não encontrada.")
+    # Auditoria da Reunião
+    st.subheader("📋 Auditar Reunião 1A1")
+    if st.session_state["eventos_carregados"]:
+        events = st.session_state["eventos_carregados"]
+        opcoes_map = {}
+        for e in events:
+            nome = e.get('summary', 'Diagnóstico Gratuito de Carreira')
+            data = e.get('start', {}).get('dateTime', e.get('start', {}).get('date', ''))[:10]
+            try:
+                data_br = datetime.datetime.strptime(data, "%Y-%m-%d").strftime("%d/%m")
+            except:
+                data_br = data
+            label = f"🗓️ [{data_br}] {nome}"
+            opcoes_map[label] = e
+
+        col_sel, col_btn = st.columns([3, 1])
+        with col_sel:
+            evento_sel_label = st.selectbox("Selecione o Diagnóstico para Auditar:", list(opcoes_map.keys()))
+            evento_obj = opcoes_map[evento_sel_label]
+            nome_lead_bruto = evento_obj.get('summary', '')
+            nome_lead_limpo = re.sub(r"(?i)diagnóstico\s+gratuito\s+de\s+carreira\s*[-–:]?", "", nome_lead_bruto).strip()
+            descricao_evento = evento_obj.get("description", "")
+            transcricao_texto = descricao_evento if descricao_evento.strip() else f"Sessão: {nome_lead_bruto}\nData: {evento_obj.get('start', {}).get('dateTime', '')}"
+
+        status_master_auto = "Perdido"
+        closer_master_auto = "Não identificado"
+        objecao_master_auto = "Sem objeção registrada"
+        
+        if not df_master.empty and "Cliente" in df_master.columns:
+            lead_norm = remover_acentos(nome_lead_limpo)
+            melhor_match = None
+            maior_score = 0.0
+
+            for idx, row in df_master.iterrows():
+                cliente_planilha = str(row.get("Cliente", ""))
+                cliente_norm = remover_acentos(cliente_planilha)
+                score = similaridade(lead_norm, cliente_norm)
+                primeiro_nome_agenda = lead_norm.split()[0] if lead_norm else ""
+                if primeiro_nome_agenda and (primeiro_nome_agenda in cliente_norm or cliente_norm.startswith(primeiro_nome_agenda[:3])):
+                    score += 0.4
+
+                if score > maior_score and score > 0.35:
+                    maior_score = score
+                    melhor_match = row
+
+            if melhor_match is not None:
+                status_master_auto = str(melhor_match.get("Status", "Perdido")).strip()
+                closer_master_auto = str(melhor_match.get("Closer", "Não identificado")).strip()
+                objecao_master_auto = str(melhor_match.get("Objeção", "Sem objeção registrada")).strip()
+
+        is_venda_confirmada = "ganho" in status_master_auto.lower()
+
+        if is_venda_confirmada:
+            st.success(f"🟢 **Status na Planilha Master:** `{status_master_auto}` | **Closer:** `{closer_master_auto}`")
         else:
-            with st.spinner("🤖 Analisando reunião com base no Roteiro Oficial Ricarreira (Blocos 1, 2 e 3)..."):
-                try:
-                    from openai import OpenAI
-                    client = OpenAI(api_key=openai_key)
-                    
-                    prompt_sistema = f"""Você é o Auditor Sênior de Vendas da Ricarreira (programa CRH, fundado por Ricardo Batista).
+            st.info(f"📌 **Status na Planilha Master:** `{status_master_auto}` | **Closer:** `{closer_master_auto}` | **Objeção:** `{objecao_master_auto}`")
+
+        with col_btn:
+            st.write(" ")
+            st.write(" ")
+            gerar_btn = st.button("🚀 Auditar com IA", use_container_width=True)
+
+        if gerar_btn:
+            if not openai_key:
+                st.error("🔑 OpenAI API Key não encontrada.")
+            else:
+                with st.spinner("🤖 Analisando reunião com base no Roteiro Oficial Ricarreira..."):
+                    try:
+                        from openai import OpenAI
+                        client = OpenAI(api_key=openai_key)
+                        
+                        prompt_sistema = f"""Você é o Auditor Sênior de Vendas da Ricarreira (programa CRH, fundado por Ricardo Batista).
 Sua missão é auditar meticulosamente a chamada 1A1 com base nos ROTEIROS OFICIAIS da empresa, divididos em 3 blocos de ~20 minutos.
 
 AVALIAÇÃO ESTRUTURAL POR BLOCOS:
 
 📍 BLOCO 1: DIAGNÓSTICO & RAIO-X (Minuto 0 ao 20)
 - Quebra-gelo & Conexão: Fez pergunta de acolhimento ("Como conheceu a Ricarreira?")?
-- Acordo de Objetividade Flexível: Mencionar que a pessoa não precisa justificar todas as notas é uma boa prática para manter o controle do tempo, MAS O CLOSER TEM LIBERDADE PARA APROFUNDAR e perguntar "por quê" em notas chave quando quiser entender melhor o cenário e escavar dores. NÃO PUNIR O CLOSER por aprofundar respostas úteis. Só aponte como problema se a reunião estritamente Perder o controle e estourar o tempo por desvios irrelevantes do lead.
-- Raio-X dos 5 Pilares: Passou por Currículo, LinkedIn, Entrevistas (investigando aprovações em Inteligência Artificial vs. RH Humano), Aumento Salarial e Mentalidade?
+- Acordo de Objetividade Flexível: Mencionar que a pessoa não precisa justificar todas as notas é uma boa prática para manter o controle do tempo, MAS O CLOSER TEM LIBERDADE PARA APROFUNDAR e perguntar "por quê" em notas chave quando quiser entender melhor o cenário e escavar dores.
+- Raio-X dos 5 Pilares: Passou por Currículo, LinkedIn, Entrevistas (investigando IA vs. RH Humano), Aumento Salarial e Mentalidade?
 - Leitura do Gráfico: Compartilhou a tela mostrando APENAS o gráfico e utilizou a narrativa padronizada conectando que Mentalidade e Desejo de Salário só geram resultado se Currículo, LinkedIn e Entrevistas estiverem destravados? Encerrou perguntando se o lead concorda e quer mudar o cenário com urgência?
 
 📍 BLOCO 2: APRESENTAÇÃO DO PROGRAMA & SLIDES (Minuto 20 ao 40)
-- História do Herói Relutante: Utilizou a copy oficial explicando por que o Ricardo relutou em criar um programa individual ("Acompanhar é diferente de só ensinar", "Ouvir que precisavam se recolocar urgente", "Criar um acelerador de resultados")?
-- Escassez de Cadeiras: Avisou no início da apresentação que a Ricarreira abre apenas vagas/cadeiras limitadas por mês para manter a qualidade do grupo?
-- Apresentação de Pilares vs. Entregáveis: Apresentou os 4 pilares antes de listar entregáveis? (Direcionamento = pré-ação/marca pessoal; Acompanhamento = pós-ação/trava de entrevistas; Facilidades = App Ricarreira, filtro ATS, Controle de Vagas e Comunidade do Bem; Aumento Salarial = crescimento pós-recolocação).
-- Perguntas de Checagem: Fez as pausas de alinhamento ao longo dos slides ("Faz sentido?", "De 0 a 10 quanto tudo o que apresentei vai te ajudar na sua maior dificuldade hoje?")?
+- História do Herói Relutante: Utilizou a copy oficial explicando por que o Ricardo relutou em criar um programa individual ("Acompanhar é diferente de só ensinar", "Ouvir que precisavam se recolocar urgente")?
+- Escassez de Cadeiras: Avisou no início da apresentação que a Ricarreira abre apenas vagas/cadeiras limitadas por mês?
+- Apresentação de Pilares vs. Entregáveis: Apresentou os 4 pilares antes de listar entregáveis (Direcionamento, Acompanhamento, Facilidades e Aumento Salarial)?
 
 📍 BLOCO 3: PITCH, ANCORAGEM & QUEBRA DE OBJEÇÕES (Minuto 40 ao 60)
-- Merecimento da Cadeira: Perguntou "Por que uma dessas vagas deveria ser sua e não de outras pessoas interessadas?" para fazer o lead se vender para o programa?
-- DETECÇÃO DE CONFRONTO DE FORMAÇÕES (SLIDE 70) - REGRA FLEXÍVEL:
-  * Se o closer perguntou/discutiu quanto o lead já investiu em graduações, pós, MBAs ou cursos técnicos, ou perguntou o valor investido nas formações para mostrar que faltava investir em CARREIRA/MENTALIDADE, CONSIDERE ESTA ETAPA COMO REALIZADA COM SUCESSO!
-- DETECÇÃO DA CALCULADORA "TEMPO É DINHEIRO" (SLIDE 71) - REGRA FLEXÍVEL:
-  * Se o closer abordou a pretensão salarial, desdobrou valores em ganho/perda anual, custo por semana ou diário, ou fez a reflexão sobre quanto se adia por continuar sem entrevistas, CONSIDERE A ANCORAGEM "TEMPO É DINHEIRO" COMO 100% REALIZADA!
-- Foco Exclusivo na Entrada (R$ 500,00): Conduziu a oferta focando no valor acessível de R$ 500,00 para garantir a vaga agora, deixando o restante para alinhar em 1 semana?
-- DETECÇÃO CONDICIONAL DA OBJEÇÃO DE CÔNJUGE/FAMÍLIA:
-  * ATENÇÃO CRÍTICA: A quebra de objeção do cônjuge/família É ESTRITAMENTE CONDICIONAL! Só avalie se o closer usou o reframe se o lead TIVER MENCIONADO EXPLÍCITAMENTE que precisa falar com marido, esposa, esposo, mulher, parceiro(a) ou família.
-  * SE O LEAD NÃO MENCIONOU CÔNJUGE/FAMÍLIA (ou se toma decisões de investimento de forma autônoma), NUNCA APONTE COMO FALHA OU PONTO DE MELHORIA que essa objeção deixou de ser contornada! Nesses casos, considere a condução do closer perfeita e alinhada ao roteiro padrão.
-- Contorno de Outras Objeções Específicas (Quando Aplicável):
-  * "Preocupado com o pós/parcelas": Usou a lógica de retorno diário do novo emprego e o investimento na vida?
-  * "Preciso de um tempo para pensar": Lembrou do compromisso de ser uma pessoa dedicada e de palavra, mostrando o dinheiro perdido em mais 15 dias parado?
-  * "E se não conseguir o emprego": Apresentou a Garantia Condicional de 1 Ano (colocando o risco nas costas da Ricarreira)?
+- Merecimento da Cadeira: Perguntou "Por que uma dessas vagas deveria ser sua e não de outras pessoas interessadas?"?
+- DETECÇÃO DE CONFRONTO DE FORMAÇÕES (SLIDE 70): Discutiu o investimento prévio em formações para mostrar falta de investimento em CARREIRA/MENTALIDADE?
+- DETECÇÃO DA CALCULADORA "TEMPO É DINHEIRO" (SLIDE 71): Abordou a pretensão salarial e desdobrou valores em ganho/perda anual, semanal ou diário?
+- Foco na Entrada (R$ 500,00): Conduziu a oferta focando no valor acessível de R$ 500,00 para garantir a vaga agora?
+- DETECÇÃO CONDICIONAL DE OBJEÇÕES: Se o lead mencionou cônjuge/família, usou o reframe oficial. Se não mencionou, NÃO COBRE esta etapa.
 
 STATUS REGISTRADO NA PLANILHA MASTER:
 - Status na Planilha: {status_master_auto}
 - Closer Responsável: {closer_master_auto}
 - Objeção no CRM: {objecao_master_auto}
-
-REGRAS RÍGIDAS DE NOTA & RESPOSTA:
 """
 
-                    if is_venda_confirmada:
-                        prompt_sistema += f"""
-- Esta sessão foi uma VENDA CONVERTIDA ({status_master_auto}).
-- A NOTA FINAL OBRIGATORIAMENTE DEVE SER ENTRE 8.0 E 10.0.
-- Se for 'Ganho (FUP)', elogie a execução do roteiro FHT e o acompanhamento que sustentou o fechamento pós-sessão.
+                        if is_venda_confirmada:
+                            prompt_sistema += f"\n- VENDA CONVERTIDA ({status_master_auto}). NOTA ENTRE 8.0 E 10.0.\n\n### 🟢 STATUS: LEAD CONVERTIDO ({status_master_auto.upper()})\n\n**Resumo Executivo & Nota do Closer: [X.X / 10]**\n---\n- **🎯 Pontos Fortes da Sessão**\n- **🚨 Pontos de Melhoria Críticos**\n- **💡 Plano de Ação para o Próximo Treinamento**"
+                        else:
+                            prompt_sistema += f"\n- NÃO CONVERTIDA (Perdido). NOTA ENTRE 0.0 E 7.9.\n\n### 🔴 STATUS: NÃO CONVERTIDO\n\n**Resumo Executivo & Nota do Closer: [X.X / 10]**\n---\n- **🎯 Pontos Fortes da Sessão**\n- **🚨 Pontos de Melhoria Críticos**\n- **💡 Plano de Ação para o Próximo Treinamento**"
 
-ESTRUTURA DE RESPOSTA OBRIGATÓRIA (Markdown):
-### 🟢 STATUS: LEAD CONVERTIDO ({status_master_auto.upper()})
+                        response = client.chat.completions.create(
+                            model="gpt-4o",
+                            messages=[
+                                {"role": "system", "content": prompt_sistema},
+                                {"role": "user", "content": f"Lead: {nome_lead_limpo}\nTranscrição/Dados:\n{transcricao_texto}"}
+                            ],
+                            temperature=0.3
+                        )
+                        
+                        analise_ia = response.choices[0].message.content
+                        match_nota = re.search(r"(\d+[\.,]?\d*)\s*/\s*10", analise_ia)
+                        nota_extraida = float(match_nota.group(1).replace(",", ".")) if match_nota else (9.0 if is_venda_confirmada else 6.0)
 
-**Resumo Executivo & Nota do Closer: [X.X / 10]**
-*(Avaliação geral da performance conectando o fechamento com o cumprimento dos roteiros oficiais dos 3 blocos)*
+                        st.session_state["historico_analises"].append({
+                            "Data": evento_obj.get('start', {}).get('dateTime', '')[:10],
+                            "Cliente": nome_lead_limpo,
+                            "Closer": closer_master_auto,
+                            "status_venda": status_master_auto,
+                            "Objeção": objecao_master_auto if not is_venda_confirmada else "Nenhuma / Fechado",
+                            "convertido": is_venda_confirmada,
+                            "nota": nota_extraida,
+                            "feedback_completo": analise_ia
+                        })
+                        st.rerun()
 
----
-- **🎯 Pontos Fortes da Sessão** *(Ex: Escavação inteligente de dores no Raio-X, copy fluida do Herói Relutante, ancoragem de formações e Tempo é Dinheiro, foco na entrada de R$ 500)*
-- **🚨 Pontos de Melhoria Críticos** *(Detalhes sutis onde o closer pode elevar ainda mais o padrão de execução)*
-- **💡 Plano de Ação para o Próximo Treinamento** *(Orientações de postura e fixação de roteiro)*
-"""
-                    else:
-                        prompt_sistema += f"""
-- Esta sessão está registrada como NÃO CONVERTIDA (Perdido).
-- A NOTA FINAL DEVE SER ENTRE 0.0 E 7.9, apontando onde o closer desviou do roteiro dos 3 blocos ou falhou no contorno da objeção real '{objecao_master_auto}'.
+                    except Exception as err:
+                        st.error(f"Erro na análise: {str(err)}")
+    else:
+        st.info("👈 Selecione o período na barra lateral e clique em 'Sincronizar Agenda & Tabela Master'.")
 
-ESTRUTURA DE RESPOSTA OBRIGATÓRIA (Markdown):
-### 🔴 STATUS: NÃO CONVERTIDO
+    st.markdown("---")
 
-**Resumo Executivo & Nota do Closer: [X.X / 10]**
-*(Diagnóstico cirúrgico de onde a venda foi perdida e quais roteiros foram ignorados)*
+    if historico:
+        st.subheader("📑 Tabela de Auditorias Realizadas")
+        df_hist = pd.DataFrame(historico)
+        df_exibicao = df_hist[["Data", "Cliente", "Closer", "status_venda", "Objeção", "nota"]].copy()
+        df_exibicao.columns = ["Data da Sessão", "Cliente", "Closer", "Status da Venda", "Objeção Registrada", "Nota FHT"]
+        st.dataframe(df_exibicao, use_container_width=True)
 
----
-- **🎯 Pontos Fortes da Sessão** *(Empatia, acolhimento ou bom preenchimento inicial do Raio-X)*
-- **🚨 Pontos de Melhoria Críticos** *(Onde falhou: ausência do Herói Relutante ou vacilo no contorno da objeção REAL apresentada pelo lead)*
-- **💡 Plano de Ação para o Próximo Treinamento** *(Treinamento prático e simulação exata para contornar a objeção '{objecao_master_auto}')*
-"""
-                    
-                    response = client.chat.completions.create(
-                        model="gpt-4o",
-                        messages=[
-                            {"role": "system", "content": prompt_sistema},
-                            {"role": "user", "content": f"Lead: {nome_lead_limpo}\nTranscrição/Dados:\n{transcricao_texto}"}
-                        ],
-                        temperature=0.3
-                    )
-                    
-                    analise_ia = response.choices[0].message.content
-                    is_convertido_final = is_venda_confirmada
-                    
-                    match_nota = re.search(r"(\d+[\.,]?\d*)\s*/\s*10", analise_ia)
-                    nota_extraida = float(match_nota.group(1).replace(",", ".")) if match_nota else (9.0 if is_convertido_final else 6.0)
+        with st.expander("🔍 Ver Último Feedback Completo Gerado pela IA", expanded=True):
+            st.markdown(historico[-1]["feedback_completo"])
 
-                    st.session_state["historico_analises"].append({
-                        "Data": evento_obj.get('start', {}).get('dateTime', '')[:10],
-                        "Cliente": nome_lead_limpo,
-                        "Closer": closer_master_auto,
-                        "status_venda": status_master_auto,
-                        "Objeção": objecao_master_auto if not is_venda_confirmada else "Nenhuma / Fechado",
-                        "convertido": is_convertido_final,
-                        "nota": nota_extraida,
-                        "feedback_completo": analise_ia
-                    })
-
-                    st.rerun()
-
-                except Exception as err:
-                    st.error(f"Erro na análise: {str(err)}")
-
-else:
-    st.info("👈 Selecione o período na barra lateral e clique em 'Sincronizar Agenda & Tabela Master'.")
-
-st.markdown("---")
-
-# -------------------------------------------------------------
-# 3. TABELA DE AUDITORIAS REALIZADAS
-# -------------------------------------------------------------
-if historico:
-    st.subheader("📑 Tabela de Auditorias Realizadas")
-    df_hist = pd.DataFrame(historico)
+# =================================----------------=============
+# ABA 3: DESEMPENHO & RANKING POR CLOSER
+# =================================----------------=============
+with tab3:
+    st.header("👥 Painel de Gestão e Performance por Closer")
+    st.caption("Acompanhamento individualizado para reuniões de feedback e desenvolvimento do time.")
     
-    df_exibicao = df_hist[["Data", "Cliente", "Closer", "status_venda", "Objeção", "nota"]].copy()
-    df_exibicao.columns = ["Data da Sessão", "Cliente", "Closer", "Status da Venda", "Objeção Registrada", "Nota FHT"]
+    closer_selecionado = st.selectbox("Selecione o Closer para Análise Individual:", ["Fernanda", "Ricardo", "Renata"])
+    df_master = st.session_state["dados_planilha"]
     
-    st.dataframe(df_exibicao, use_container_width=True)
+    if not df_master.empty and "Closer" in df_master.columns:
+        df_closer_filtrado = df_master[df_master["Closer"].astype(str).str.strip().str.lower() == closer_selecionado.lower()]
+        
+        col_c1, col_c2, col_c3 = st.columns(3)
+        tot_c = len(df_closer_filtrado)
+        ganhos_c = sum(1 for s in df_closer_filtrado["Status"].astype(str) if "ganho" in s.lower())
+        taxa_ind = (ganhos_c / tot_c * 100) if tot_c > 0 else 0.0
+        
+        with col_c1:
+            st.metric(" Atendimentos no Período", f"{tot_c}")
+        with col_c2:
+            st.metric(" Conversões (Ato/FUP)", f"{ganhos_c}")
+        with col_c3:
+            st.metric(" Taxa de Conversão Individual", f"{taxa_ind:.1f}%")
+            
+        st.markdown("---")
+        
+        col_graf1, col_graf2 = st.columns(2)
+        
+        with col_graf1:
+            st.subheader("🚩 Ranking de Objeções Enfrentadas")
+            if "Objeção" in df_closer_filtrado.columns and not df_closer_filtrado.empty:
+                df_obj = df_closer_filtrado[df_closer_filtrado["Objeção"].astype(str).str.strip() != ""]
+                df_obj_counts = df_obj["Objeção"].value_counts().reset_index()
+                df_obj_counts.columns = ["Objeção Registrada", "Quantidade"]
+                
+                if not df_obj_counts.empty:
+                    st.bar_chart(df_obj_counts.set_index("Objeção Registrada"))
+                else:
+                    st.info("Nenhuma objeção registrada para este closer no período.")
+            else:
+                st.info("Sem dados de objeção para exibir.")
 
-    with st.expander("🔍 Ver Último Feedback Completo Gerado pela IA", expanded=True):
-        st.markdown(historico[-1]["feedback_completo"])
+        with col_graf2:
+            st.subheader("⭐ Evolução das Auditorias (Histórico IA)")
+            hist_closer = [h for h in st.session_state["historico_analises"] if str(h.get("Closer", "")).lower() == closer_selecionado.lower()]
+            if hist_closer:
+                df_hc = pd.DataFrame(hist_closer)
+                st.line_chart(df_hc[["Data", "nota"]].set_index("Data"))
+            else:
+                st.info("Nenhuma auditoria da IA gravada para este closer nesta sessão de uso.")
+    else:
+        st.info("Sincronize a Agenda & Tabela Master para visualizar os gráficos individuais dos closers.")

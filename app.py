@@ -344,9 +344,9 @@ with tab2:
 
     st.markdown("---")
 
-    # Tabela Performance por Closer
+    # Tabela Performance por Closer (COM THIAGO)
     st.subheader("👥 Performance Geral da Equipe de Closers")
-    closers_alvo = ["Fernanda", "Ricardo", "Renata"]
+    closers_alvo = ["Fernanda", "Ricardo", "Renata", "Thiago"]
     df_master = st.session_state["dados_planilha"]
 
     dados_closers = []
@@ -521,13 +521,13 @@ STATUS REGISTRADO NA PLANILHA MASTER:
             st.markdown(historico[-1]["feedback_completo"])
 
 # =================================----------------=============
-# ABA 3: DESEMPENHO & RANKING POR CLOSER
+# ABA 3: DESEMPENHO & RANKING POR CLOSER (COM THIAGO)
 # =================================----------------=============
 with tab3:
     st.header("👥 Painel de Gestão e Performance por Closer")
     st.caption("Acompanhamento individualizado para reuniões de feedback e desenvolvimento do time.")
     
-    closer_selecionado = st.selectbox("Selecione o Closer para Análise Individual:", ["Fernanda", "Ricardo", "Renata"])
+    closer_selecionado = st.selectbox("Selecione o Closer para Análise Individual:", ["Fernanda", "Ricardo", "Renata", "Thiago"])
     df_master = st.session_state["dados_planilha"]
     
     if not df_master.empty and "Closer" in df_master.columns:

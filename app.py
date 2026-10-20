@@ -10,9 +10,32 @@ from googleapiclient.discovery import build
 
 st.set_page_config(page_title="Central do Closer - Sessão 1A1", page_icon="📊", layout="wide")
 
-# CSS para garantir legibilidade e estilo moderno
+# CSS para harmonização visual: Títulos menores e textos do roteiro legíveis
 st.markdown("""
     <style>
+    /* Padronização de Títulos */
+    h1 {
+        font-size: 1.8rem !important;
+        font-weight: 700 !important;
+        color: #0f172a !important;
+        margin-bottom: 0.5rem !important;
+    }
+    h2 {
+        font-size: 1.4rem !important;
+        font-weight: 600 !important;
+        color: #1e293b !important;
+        margin-top: 1.2rem !important;
+        margin-bottom: 0.6rem !important;
+    }
+    h3 {
+        font-size: 1.15rem !important;
+        font-weight: 600 !important;
+        color: #334155 !important;
+        margin-top: 1rem !important;
+        margin-bottom: 0.4rem !important;
+    }
+    
+    /* Layout dos Cards de Métricas */
     .metric-container {
         display: flex;
         justify-content: space-between;
@@ -29,39 +52,42 @@ st.markdown("""
         box-shadow: 0 1px 2px rgba(0,0,0,0.03);
     }
     .metric-card-title {
-        font-size: 0.8rem;
+        font-size: 0.85rem;
         font-weight: 600;
         color: #475569;
         margin-bottom: 4px;
         white-space: nowrap;
     }
     .metric-card-value {
-        font-size: 1.4rem;
+        font-size: 1.3rem;
         font-weight: 700;
         color: #0f172a;
         line-height: 1.2;
     }
     .metric-card-sub {
-        font-size: 0.75rem;
+        font-size: 0.78rem;
         color: #64748b;
         margin-top: 4px;
         font-weight: 500;
     }
+    
+    /* Caixas e Fontes do Playbook de Roteiros */
     .playbook-box {
         background-color: #f8fafc;
         border-left: 4px solid #2563eb;
-        padding: 16px;
+        padding: 14px 18px;
         border-radius: 6px;
         margin-bottom: 16px;
     }
     .playbook-script {
-        font-style: italic;
+        font-size: 1.02rem !important; /* Tamanho confortável para leitura */
+        font-style: normal;
         color: #0f172a;
         background-color: #ffffff;
-        padding: 14px;
+        padding: 16px;
         border-radius: 6px;
         border: 1px solid #cbd5e1;
-        line-height: 1.5;
+        line-height: 1.65; /* Maior espaçamento entre linhas */
     }
     </style>
 """, unsafe_allow_html=True)
@@ -189,7 +215,7 @@ tab1, tab2, tab3 = st.tabs([
 ])
 
 # =================================----------------=============
-# ABA 1: ROTEIROS & PLAYBOOK DE BOLSO (NOVO ROTEIRO DIAGNÓSTICO)
+# ABA 1: ROTEIROS & PLAYBOOK DE BOLSO
 # =================================----------------=============
 with tab1:
     st.header("📖 Roteiro de Bolso - Diagnóstico de Carreira")

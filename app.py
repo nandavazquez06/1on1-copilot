@@ -96,7 +96,7 @@ def similaridade(a, b):
     return SequenceMatcher(None, remover_acentos(a), remover_acentos(b)).ratio()
 
 def obter_coluna_case_insensitive(df, col_name):
-    if df.empty:
+    if df is None or df.empty:
         return None
     for col in df.columns:
         if str(col).strip().lower() == col_name.strip().lower():
@@ -138,8 +138,7 @@ def buscar_dados_google(_credentials, email_equipe, inicio_data, fim_data, id_pl
             spreadsheetId=id_planilha, range="Base_Master!A1:AA1000"
         ).execute()
         values = sheet_result.get('values', [])
-        if values:
-            # Garante limpeza dos nomes das colunas
+        if values and len(values) > 1:
             cols = [str(c).strip() for c in values[0]]
             df_planilha = pd.DataFrame(values[1:], columns=cols)
     except Exception:
@@ -219,91 +218,519 @@ tab1, tab2, tab3 = st.tabs([
     "👥 Desempenho & Ranking por Closer"
 ])
 
-# =================================----------------=============
-# ABA 1: ROTEIROS & PLAYBOOK DE BOLSO
-# =================================----------------=============
+# ==============================================================
+# ABA 1: ROTEIROS & PLAYBOOK DE BOLSO (100% FIEL AO SEU TEXTO)
+# ==============================================================
 with tab1:
-    st.header("📖 Roteiro de Bolso - Diagnóstico de Carreira")
+    st.header("📚 Roteiros & Playbook de Bolso")
     st.caption("Consulte na íntegra as falas, devoluções de Raio-X por notas, slides e quebras de objeção.")
     
     p_tab1, p_tab2, p_tab3 = st.tabs([
         "📍 Bloco 1: Acolhimento & Raio-X", 
-        "📍 Bloco 2: Apresentação & Slides", 
+        "📍 Bloco 2: Apresentação do Programa e Slides", 
         "📍 Bloco 3: Oferta & Quebra de Objeções"
     ])
     
     with p_tab1:
-        st.title("Bloco 1: Acolhimento & Raio-X")
+        st.subheader("Bloco 1: Acolhimento & Raio-X")
         
-        st.subheader("1. Quebrando o Gelo & Acolhimento")
-        st.markdown('<div class="playbook-box"><div class="playbook-script">"Oi, (nome da pessoa)! Tudo bem?"<br>"De onde você fala?"<br><br><b>Acolhimento:</b> "Vi no seu LinkedIn que o seu último trabalho foi na [Empresa/Setor], né?"<br><br><b>Expectativa:</b> "Me conta um pouquinho de como está o seu momento atual?"<br>"E o que você está buscando para os próximos passos da sua carreira?"</div></div>', unsafe_allow_html=True)
+        st.markdown("**1. Quebrando o Gelo & Acolhimento**")
+        st.markdown("""
+        <div class="playbook-box">
+            <div class="playbook-script">
+            “Oi, (nome da pessoa)! Tudo bem?”<br>
+            “De onde você fala?”<br><br>
+            <b>Acolhimento</b><br>
+            "Vi no seu LinkedIn que o seu último trabalho foi na [Empresa/Setor], né?”<br><br>
+            <b>Expectativa</b><br>
+            “Me conta um pouquinho de como está o seu momento atual?”<br>
+            “E o que você está buscando para os próximos passos da sua carreira?"
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
         
-        st.subheader("2. Acordo Inicial do Raio-X")
-        st.markdown('<div class="playbook-box"><div class="playbook-script">"O objetivo desse diagnóstico é detalharmos melhor o seu cenário para eu entender as suas maiores dificuldades para conseguir emprego, e para isso eu vou te fazer algumas perguntas para você me responder com notas de 0 a 10 para avaliarmos o seu momento. Não precisa justificar o motivo da nota por enquanto, depois eu vou te mostrar um gráfico das suas respostas e nós vamos falar mais sobre isso. Eu preciso que você seja BRUTALMENTE SINCERO(A). Posso confiar na sua palavra?"</div></div>', unsafe_allow_html=True)
+        st.markdown("**2. Acordo Inicial do Raio-X**")
+        st.markdown("""
+        <div class="playbook-box">
+            <div class="playbook-script">
+            “O objetivo desse diagnóstico é detalharmos melhor o seu cenário para eu entender as suas maiores dificuldades para conseguir emprego, e para isso eu vou te fazer algumas perguntas para você me responder com notas de 0 a 10 para avaliarmos o seu momento. Não precisa justificar o motivo da nota por enquanto, depois eu vou te mostrar um gráfico das suas respostas e nós vamos falar mais sobre isso. Eu preciso que você seja BRUTALMENTE SINCERO(A). Posso confiar na sua palavra?"
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
-        st.subheader("3. Devolutiva por Pilares e Faixa de Nota")
+        st.markdown("**3. Devolutiva por Pilares e Faixa de Nota**")
         
         st.markdown("**PILAR: MENTALIDADE**")
-        st.markdown('<div class="playbook-box"><div class="playbook-script"><b>Nota 8 a 10:</b> "Olhando aqui para o seu gráfico, o primeiro ponto que se destaca é a sua Mentalidade com uma nota bem alta. Isso mostra que você não é uma pessoa acomodada, e sabe que a sua carreira não pode mais ficar parada. Você me disse que é dedicado(a), uma pessoa de palavra, e isso é ótimo, porque sem esse compromisso nenhum método funciona… então o seu momento de virar o jogo é agora, porque é essa sua disposição que vai impulsionar todo o resto."<br><br><b>Nota 0 a 7:</b> "A sua nota de Mentalidade ficou baixa e isso me preocupa bastante, porque estou entendendo que as rejeições do mercado abalaram a sua confiança. Você quer mudar de vida, mas na hora de priorizar o seu desenvolvimento e tomar decisões, acaba buscando desculpas. Sem levar a sua carreira como prioridade absoluta, nenhum currículo ou LinkedIn novo vai fazer milagre por você."</div></div>', unsafe_allow_html=True)
+        st.markdown("""
+        <div class="playbook-box">
+            <div class="playbook-script">
+            <b>Nota 8 a 10:</b> "Olhando aqui para o seu gráfico, o primeiro ponto que se destaca é a sua Mentalidade com uma nota bem alta. Isso mostra que você não é uma pessoa acomodada, e sabe que a sua carreira não pode mais ficar parada. Você me disse que é dedicado(a), uma pessoa de palavra, e isso é ótimo, porque sem esse compromisso nenhum método funciona… então o seu momento de virar o jogo é agora, porque é essa sua disposição que vai impulsionar todo o resto."<br><br>
+            <b>Nota 0 a 7:</b> "A sua nota de Mentalidade ficou baixa e isso me preocupa bastante, porque estou entendendo que as rejeições do mercado abalaram a sua confiança. Você quer mudar de vida, mas na hora de priorizar o seu desenvolvimento e tomar decisões, acaba buscando desculpas. Sem levar a sua carreira como prioridade absoluta, nenhum currículo ou LinkedIn novo vai fazer milagre por você."
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
         st.markdown("**PILAR: AUMENTO SALARIAL**")
-        st.markdown('<div class="playbook-box"><div class="playbook-script"><b>Nota 6 a 10:</b> "No pilar de Aumento Salarial, a sua pontuação também foi alta, e isso mostra que você tem uma boa articulação nas empresas, sabe se relacionar com as pessoas, criar pontes e joga bem a dinâmica do ambiente corporativo. Só que não adianta você saber como pedir um aumento salarial, fazer o jogo político ou gerar cases de lucro, se você não consegue uma vaga para mostrar essas habilidades."<br><br><b>Nota 0 a 5:</b> "Sua nota de aumento salarial foi baixa porque provavelmente você sempre enxergou o trabalho só pela parte técnica e operacional, negligenciando a sua gestão de imagem e uma articulação política, e se você não souber construir um mapa de aliados estratégicos, vai acabar sendo ignorado(a) nas promoções e sempre ver profissionais menos qualificados subirem na sua frente."</div></div>', unsafe_allow_html=True)
+        st.markdown("""
+        <div class="playbook-box">
+            <div class="playbook-script">
+            <b>Nota 6 a 10:</b> "No pilar de Aumento Salarial, a sua pontuação também foi alta, e isso mostra que você tem uma boa articulação nas empresas, sabe se relacionar com as pessoas, criar pontes e joga bem a dinâmica do ambiente corporativo. Só que não adianta você saber como pedir um aumento salarial, fazer o jogo político ou gerar cases de lucro, se você não consegue uma vaga para mostrar essas habilidades."<br><br>
+            <b>Nota 0 a 5:</b> "Sua nota de aumento salarial foi baixa porque provavelmente você sempre enxergou o trabalho só pela parte técnica e operacional, negligenciando a sua gestão de imagem e uma articulação política, e se você não souber construir um mapa de aliados estratégicos, vai acabar sendo ignorado(a) nas promoções e sempre ver profissionais menos qualificados subirem na sua frente."
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
         st.markdown("**PILAR: CURRÍCULO**")
-        st.markdown('<div class="playbook-box"><div class="playbook-script"><b>Nota 0 a 5:</b> "No pilar de currículo nós vemos os pontos de alerta para a sua recolocação: a gente percebe que dos currículos que você envia, quase nenhum se transforma em entrevista. Provavelmente o seu material está com descrições genéricas, dizendo \'o que você fazia\', em vez de demonstrar \'o resultado que você gerava para as empresas\'. Então você é um(a) profissional qualificado(a), mas o mercado nem fica sabendo do seu real potencial porque seu currículo não é validado nem pelo robô, nem pelo recrutador."<br><br><b>Nota 6 a 10:</b> "Seu currículo está bem desenhado, focado em métricas e alinhado aos algoritmos, o que justifica a sua alta taxa de retorno. Precisamos fazer pequenos ajustes para cargos mais seniors."</div></div>', unsafe_allow_html=True)
+        st.markdown("""
+        <div class="playbook-box">
+            <div class="playbook-script">
+            <b>Nota 0 a 5:</b> "No pilar de currículo nós vemos os pontos de alerta para a sua recolocação: a gente percebe que dos currículos que você envia, quase nenhum se transforma em entrevista. Provavelmente o seu material está com descrições genéricas, dizendo 'o que você fazia', em vez de demonstrar 'o resultado que você gerava para as empresas'. Então você é um(a) profissional qualificado(a), mas o mercado nem fica sabendo do seu real potencial porque seu currículo não é validado nem pelo robô, nem pelo recrutador."<br><br>
+            <b>Nota 6 a 10:</b> "Seu currículo está bem desenhado, focado em métricas e alinhado aos algoritmos, o que justifica a sua alta taxa de retorno. Precisamos fazer pequenos ajustes para cargos mais seniors."
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
         st.markdown("**PILAR: LINKEDIN**")
-        st.markdown('<div class="playbook-box"><div class="playbook-script"><b>Nota 0 a 5:</b> "Na parte de LinkedIn, a sua nota foi quase zero, mostrando que você está invisível para os recrutadores e que o seu perfil hoje não aparece nas buscas do LinkedIn Recruiter porque falta uma estratégia para você conseguir abordar os responsáveis pelas vagas (principalmente as ocultas)."<br><br><b>Nota 6 a 10:</b> "O seu perfil no LinkedIn já atua como um ímã de oportunidades, gerando abordagens semanais de headhunters de forma orgânica."</div></div>', unsafe_allow_html=True)
+        st.markdown("""
+        <div class="playbook-box">
+            <div class="playbook-script">
+            <b>Nota 0 a 5:</b> "Na parte de LinkedIn, a sua nota foi quase zero, mostrando que você está invisível para os recrutadores e que o seu perfil hoje não aparece nas buscas do LinkedIn Recruiter porque falta uma estratégia para você conseguir abordar os responsáveis pelas vagas (principalmente as ocultas)."<br><br>
+            <b>Nota 6 a 10:</b> "O seu perfil no LinkedIn já atua como um ímã de oportunidades, gerando abordagens semanais de headhunters de forma orgânica."
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
         st.markdown("**PILAR: ENTREVISTAS**")
-        st.markdown('<div class="playbook-box"><div class="playbook-script"><b>Nota 0 a 5:</b> "Nas Entrevistas temos um efeito dominó: como o seu Currículo e LinkedIn estão travados e você está invisível, você faz poucas entrevistas e não consegue treinar. Nas raras vezes em que você consegue uma oportunidade, a pressão é tão grande por ser \'a única chance\' que você fica nervoso(a) e não consegue contar a sua história da melhor forma. Você sai da entrevista sem ter certeza se foi bem e nunca recebe um feedback assertivo sobre onde errou. Como consequência, você não consegue negociar e aceita qualquer valor, em vez de se posicionar para conquistar o salário que você realmente merece."<br><br><b>Nota 6 a 10:</b> "Sua performance em conversas é excelente: você domina a condução com o gestor e consegue transmitir alta credibilidade e alinhamento cultural nas etapas finais."</div></div>', unsafe_allow_html=True)
+        st.markdown("""
+        <div class="playbook-box">
+            <div class="playbook-script">
+            <b>Nota 0 a 5:</b> "Nas Entrevistas temos um efeito dominó: como o seu Currículo e LinkedIn estão travados e você está invisível, você faz poucas entrevistas e não consegue treinar. Nas raras vezes em que você consegue uma oportunidade, a pressão é tão grande por ser 'a única chance' que você fica nervoso(a) e não consegue contar a sua história da melhor forma. Você sai da entrevista sem ter certeza se foi bem e nunca recebe um feedback assertivo sobre onde errou. Como consequência, você não consegue negociar e aceita qualquer valor, em vez de se posicionar para conquistar o salário que você realmente merece."<br><br>
+            <b>Nota 6 a 10:</b> "Sua performance em conversas é excelente: você domina a condução com o gestor e consegue transmitir alta credibilidade e alinhamento cultural nas etapas finais."
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
-        st.subheader("4. Transição para o Pitch")
-        st.markdown('<div class="playbook-box"><div class="playbook-script">"Olhando agora o seu Raio-X como um todo fica claro que o seu problema NÃO é falta de capacidade técnica e nem falta de vontade. O verdadeiro gargalo é a falta de um método estratégico para a sua carreira, porque você está travado(a) e acaba se esforçando demais, imagino que gasta horas aplicando para vagas e recebe um retorno quase nulo.<br><br>O que nós precisamos fazer agora é reestruturar a sua comunicação para te dar visibilidade, ensinar você a contar a sua história de forma atraente para os recrutadores e gerar mais entrevistas para que você seja contratado(a) nos próximos 51 dias. Faz sentido para você? Você quer mudar esse cenário?"</div></div>', unsafe_allow_html=True)
+        st.markdown("**TRANSIÇÃO PARA O PITCH ANTES DA HISTÓRIA DO HERÓI RELUTANTE**")
+        st.markdown("""
+        <div class="playbook-box">
+            <div class="playbook-script">
+            "Olhando agora o seu Raio-X como um todo fica claro que o seu problema NÃO é falta de capacidade técnica e nem falta de vontade. O verdadeiro gargalo é a falta de um método estratégico para a sua carreira, porque você está travado(a) e acaba se esforçando demais, imagino que gasta horas aplicando para vagas e recebe um retorno quase nulo.<br><br>
+            O que nós precisamos fazer agora é reestruturar a sua comunicação para te dar visibilidade, ensinar você a contar a sua história de forma atraente para os recrutadores e gerar um mais entrevistas para que você seja contratado(a) nos próximos 51 dias. Faz sentido para você? Você quer mudar esse cenário?"
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
     with p_tab2:
-        st.title("Bloco 2: Apresentação do Programa e Slides")
+        st.subheader("Bloco 2: Apresentação do Programa e Slides")
         
         st.markdown("**SLIDE 1 (HISTÓRIA DO HERÓI RELUTANTE)**")
-        st.markdown('<div class="playbook-box"><div class="playbook-script">"O Ricardo por muito tempo relutou em criar um programa de acompanhamento individual personalizado, porque acreditava que isso iria tomar muito tempo dele e da nossa equipe. Isso porque nós já temos um método só com aulas gravadas que ajuda muitas pessoas, mas chegou um momento em que não eram essas muitas pessoas que preocupavam ele... e sim o fato de ter um monte de gente aplicando esse método sem ter o acompanhamento necessário para aumentar a taxa de aprovação em processos seletivos e, mais do que isso, ajudar as pessoas a crescer na carreira a longo prazo.<br><br>E olha, a gente sabe que acompanhar é diferente de só ensinar, e conversando com alguns alunos muitos pediam algo mais personalizado para conseguir o novo emprego mais rápido. Então ouvir das pessoas que elas precisavam se recolocar urgente fez o Ric pensar... e se eu criasse um programa de acompanhamento personalizado, para a gente realmente pegar as pessoas pela mão, analisar o que elas estão fazendo e para ajudar elas a fazerem o que realmente precisam fazer.<br><br>E aí ele olhou para o próprio cenário, porque ele está em vários programas de acompanhamento que ajudam ele a acelerar os resultados, então ele pensou: Por que não criar o MEU acelerador de resultados? Então hoje nós temos esse programa já com um número bom de alunos, porque quando mostramos isso para as pessoas, várias falaram: \'nossa, era isso que eu precisava!\'.<br><br>E agora eu quero saber: posso te mostrar o nosso programa de acompanhamento que vai te ajudar a melhorar seu LinkedIn e currículo, aumentando a taxa de aprovação nas entrevistas para no futuro você ter mais chances de conseguir um aumento salarial?"</div></div>', unsafe_allow_html=True)
+        st.markdown("""
+        <div class="playbook-box">
+            <div class="playbook-script">
+            "O Ricardo por muito tempo relutou em criar um programa de acompanhamento individual personalizado, porque acreditava que isso iria tomar muito tempo dele e da nossa equipe. Isso porque nós já temos um método só com aulas gravadas que ajuda muitas pessoas, mas chegou um momento em que não eram essas muitas pessoas que preocupavam ele... e sim o fato de ter um monte de gente aplicando esse método sem ter o acompanhamento necessário para aumentar a taxa de aprovação em processos seletivos e, mais do que isso, ajudar as pessoas a crescer na carreira a longo prazo.<br><br>
+            E olha, a gente sabe que acompanhar é diferente de só ensinar, e conversando com alguns alunos muitos pediam algo mais personalizado para conseguir o novo emprego mais rápido. Então ouvir das pessoas que elas precisavam se recolocar urgente fez o Ric pensar... e se eu criasse um programa de acompanhamento personalizado, para a gente realmente pegar as pessoas pela mão, analisar o que elas estão fazendo e para ajudar elas a fazerem o que realmente precisam fazer.<br><br>
+            E aí ele olhou para o próprio cenário, porque ele está em vários programas de acompanhamento que ajudam ele a acelerar os resultados, então ele pensou: Por que não criar o MEU acelerador de resultados? Então hoje nós temos esse programa já com um número bom de alunos, porque quando mostramos isso para as pessoas, várias falaram: 'nossa, era isso que eu precisava!'.<br><br>
+            E agora eu quero saber: posso te mostrar o nosso programa de acompanhamento que vai te ajudar a melhorar seu LinkedIn e currículo, aumentando a taxa de aprovação nas entrevistas para no futuro você ter mais chances de conseguir um aumento salarial?”
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
         st.markdown("**SLIDE 2 (O QUE É A CRH)**")
-        st.markdown('<div class="playbook-box"><div class="playbook-script">"A CRH é um programa de aceleração de carreira onde você vai receber o nosso direcionamento, acompanhamento e feedbacks personalizados durante o período de 12 meses, para conseguir empregos em até 51 dias e ter aumentos salariais nas suas futuras empresas. É um programa feito para profissionais em transição de carreira, pessoas que perderam o emprego ou que ocupam cargos operacionais e querem chegar a posições de liderança. Nesse programa, você implementa um método estruturado para conseguir o seu emprego ideal em até 51 dias, alcançar o cargo que você deseja e superar os X mil reais (pretensão salarial) mensais com aumentos estratégicos."</div></div>', unsafe_allow_html=True)
+        st.markdown("""
+        <div class="playbook-box">
+            <div class="playbook-script">
+            “A CRH é um programa de aceleração de carreira onde você vai receber o nosso direcionamento, acompanhamento e feedbacks personalizados durante o período de 12 meses, para conseguir empregos em até 51 dias e ter aumentos salariais nas suas futuras empresas. É um programa feito para profissionais em transição de carreira, pessoas que perderam o emprego ou que ocupam cargos operacionais e querem chegar a posições de liderança. Nesse programa, você implementa um método estruturado para conseguir o seu emprego ideal em até 51 dias, alcançar o cargo que você deseja e superar os X mil reais (pretensão salarial) mensais com aumentos estratégicos”.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
         st.markdown("**SLIDE 3 (DEPOIMENTOS)**")
-        st.markdown('<div class="playbook-box"><div class="playbook-script">"Aqui eu quero te mostrar alguns depoimentos de pessoas que conseguiram a sua recolocação aplicando o método que usamos com os alunos da CRH. No Youtube nós temos uma playlist com mais de 200 desses dedicados especialistas, mas separamos algumas das histórias para poder te inspirar e você entender melhor como ajudamos essas pessoas com o nosso acompanhamento".<br><br>*(Conteúdo do Slide)*<br><br>E aí, qual desses depoimentos mais te marcou?</div></div>', unsafe_allow_html=True)
+        st.markdown("""
+        <div class="playbook-box">
+            <div class="playbook-script">
+            "Aqui eu quero te mostrar alguns depoimentos de pessoas que conseguiram a sua recolocação aplicando o método que usamos com os alunos da CRH. No Youtube nós temos uma playlist com mais de 200 desses dedicados especialistas, mas separamos algumas das histórias para poder te inspirar e você entender melhor como ajudamos essas pessoas com o nosso acompanhamento”.<br><br>
+            (Conteúdo do Slide)<br><br>
+            E aí, qual desses depoimentos mais te marcou?
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
-        st.markdown("**SLIDE 43 a 48 (Pilar: DIREIONAMENTO)**")
-        st.markdown('<div class="playbook-box"><div class="playbook-script"><b>Slide 43:</b> "Dentro da CRH nós temos 4 pilares que vão te ajudar a conseguir seu novo emprego mais rápido: Direcionamento, Acompanhamento, Ferramentas e Comunidade"<br><br><b>Slide 44:</b> "No pilar de Direcionamento, nós vamos entender onde você quer chegar e em quanto tempo, e traçar um plano de ação estratégico com tudo o que você precisa fazer para conseguir a sua recolocação dentro da meta de tempo que for estabelecida pela sua necessidade".<br><br><b>Slide 45:</b> "Então como nós vamos mapear isso? A primeira coisa é o Direcionamento Estratégico, para virar a chave de sempre ter uma tempestade de negativas para as vagas. Em uma sessão individual nós vamos avaliar o seu histórico profissional, travas, cargo e salário ideal, e você vai aprender só o necessário, sem perder tempo e dinheiro, para avançar nos processos seletivos com segurança e receber mais propostas de entrevista. Então a mentora vai te indicar quais são as aulas que você precisa assistir para melhorar o seu Currículo e LinkedIn de uma forma efetiva".<br><br><b>Slide 46:</b> "E aí, você vai ter acesso a dois cursos dentro de uma plataforma online: um de emprego, e um de aumento. Todos os alunos que conseguiram recolocação em até 51 dias tiveram acesso a esse treinamento aqui, então você vai conseguir emprego rápido com as aulas que nós vamos te indicar, sem ficar perdido(a) porque não tem direcionamento e um método estruturado que funciona".<br><br><b>Slide 47:</b> "Finalizando os ajustes das aulas no Currículo e LinkedIn, nós fazemos com você uma sessão individual para avaliar o seu novo material. Então antes de você sair se aplicando para as vagas gastando tempo sem ter resultado, nós te ajudamos a arrumar a casa para você ter uma segurança de que o Currículo e LinkedIn estão prontos para você se inscrever e conseguir gerar entrevistas".<br><br><b>Slide 48:</b> "E você se aplicando para as vagas com um currículo que dá resultado, vai começar a aparecer entrevista. E aí, o que nós vamos fazer? Te direcionar nessa etapa também. Então quando você passar para a entrevista, vai ter uma simulação individual com 2 mentores. O objetivo aqui é que você tenha feedbacks personalizados e brutalmente sinceros para aquela entrevista específica, com base na descrição da vaga e cultura da empresa, então você não vai mais ficar sem feedback".</div></div>', unsafe_allow_html=True)
+        st.markdown("**SLIDE 43 (4 PILARES)**")
+        st.markdown("""
+        <div class="playbook-box">
+            <div class="playbook-script">
+            “Dentro da CRH nós temos 4 pilares que vão te ajudar a conseguir seu novo emprego mais rápido: Direcionamento, Acompanhamento, Ferramentas e Comunidade”
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
-        st.markdown("**SLIDE 49 a 53 (Pilar: ACOMPANHAMENTO)**")
-        st.markdown('<div class="playbook-box"><div class="playbook-script"><b>Slide 49:</b> "E como eu falei lá nos pilares da CRH, além de te direcionar nós te acompanhamos sempre olhando os resultados e fazendo análises da sua estratégia sempre que necessário para destravar todas as dificuldades e gargalos no seu processo de buscar emprego".<br><br><b>Slide 50:</b> "E aí, hoje quem está na nossa mentoria tem acesso a um sistema para a gente poder olhar com estratégia para cada uma das vagas em que a pessoa se candidatou e retirar os gargalos dos processos seletivos. Então nesse aplicativo que você vai ter disponível, tem uma ferramenta que te ajuda a fazer uma gestão melhor das suas vagas e você consegue acompanhar o andamento dos processos seletivos de uma forma mais organizada e controlada, e a gente te acompanha para entender se a estratégia que planejamos está dando certo, então você não fica sozinho(a)".<br><br><b>Slide 51:</b> "E nós também vamos te acompanhar com grupos no WhatsApp. Hoje todos os alunos têm acesso à nossa equipe de forma individual, para que consiga ser acompanhado em qualquer dificuldade nesse processo de empregabilidade de forma mais efetiva. Então você pode mandar áudios depois de uma entrevista contando como foi, por exemplo, e a gente vai te direcionando sobre os próximos passos, até você receber a sua proposta de emprego".<br><br><b>Slide 52 & 53:</b> "Nessa mesma linha, nós orientamos pedir 48h depois de receber a proposta da empresa para analisar. E nesse período de 48h nós aproveitamos para fazer com você um plantão de negociação salarial no WhatsApp, te acompanhando para conseguir aumentar o valor da proposta. A Gabi conseguiu negociar e aumentou R$4.500 no salário todos os meses usando esse método aqui. Então vamos supor que você recebeu uma proposta para ganhar R$XXXX (pretensão salarial da pessoa), o nosso objetivo vai ser você chegar nos R$XXXX (4.000 a mais do que a pretensão). E não foi só a Gabi, a Claudia aumentou 1k, a Jessica foi de 8k para 10k, e o José conseguiu aumentar 1.2k todos os meses!"</div></div>', unsafe_allow_html=True)
+        st.markdown("**SLIDE 44 (O QUE É DIRECIONAMENTO)**")
+        st.markdown("""
+        <div class="playbook-box">
+            <div class="playbook-script">
+            “No pilar de Direcionamento, nós vamos entender onde você quer chegar e em quanto tempo, e traçar um plano de ação estratégico com tudo o que você precisa fazer para conseguir a sua recolocação dentro da meta de tempo que for estabelecida pela sua necessidade”.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
-        st.markdown("**SLIDE 54 a 57 (Pilar: FERRAMENTAS)**")
-        st.markdown('<div class="playbook-box"><div class="playbook-script"><b>Slide 54 & 55:</b> "Além de te direcionar e acompanhar, nós vamos te dar ferramentas para você sempre evoluir no processo de empregabilidade. Uma das ferramentas é o buscador de vagas no APP Ricarreira, para pesquisar a nomenclatura e filtrar por estado e cidade para encontrar as vagas disponíveis no mercado em todos os ATS."<br><br><b>Slide 56 & 57:</b> "Você também terá o acervo de currículos campeões para se inspirar em currículos de 1 página dos nossos alunos validados. Além disso, terá uma biblioteca de mensagens para falar com recrutadores e mais de 10 ferramentas para acelerar o processo para se recolocar em até 51 dias."</div></div>', unsafe_allow_html=True)
+        st.markdown("**SLIDE 45**")
+        st.markdown("""
+        <div class="playbook-box">
+            <div class="playbook-script">
+            “Então como nós vamos mapear isso? A primeira coisa é o Direcionamento Estratégico, para virar a chave de sempre ter uma tempestade de negativas para as vagas. Em uma sessão individual nós vamos avaliar o seu histórico profissional, travas, cargo e salário ideal, e você vai aprender só o necessário, sem perder tempo e dinheiro, para avançar nos processos seletivos com segurança e receber mais propostas de entrevista. Então a mentora vai te indicar quais são as aulas que você precisa assistir para melhorar o seu Currículo e LinkedIn de uma forma efetiva”.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
-        st.markdown("**SLIDE 58 a 60 (Pilar: COMUNIDADE & DAILIES)**")
-        st.markdown('<div class="playbook-box"><div class="playbook-script"><b>Slide 58:</b> "E falando um pouco sobre a comunidade, a ideia aqui é ter sempre uma inteligência coletiva, porque o trabalho de quem está desempregado é buscar trabalho."<br><br><b>Slide 59 & 60:</b> "Fazemos reuniões diárias: de segunda a sexta às 9h tem a Daily de arrumar a casa para avaliação de currículo e LinkedIn. E de segunda a sexta às 11h tem a Daily de empregabilidade com o Ric para tirar dúvidas de aplicação, networking e entrevistas. Essa Daily é a parte mais rica da CRH para conseguir emprego rápido."</div></div>', unsafe_allow_html=True)
+        st.markdown("**SLIDE 46**")
+        st.markdown("""
+        <div class="playbook-box">
+            <div class="playbook-script">
+            “E aí, você vai ter acesso a dois cursos dentro de uma plataforma online: um de emprego, e um de aumento. Todos os alunos que conseguiram recolocação em até 51 dias tiveram acesso a esse treinamento aqui, então você vai conseguir emprego rápido com as aulas que nós vamos te indicar, sem ficar perdido(a) porque não tem direcionamento e um método estruturado que funciona”.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
-        st.markdown("**SLIDE 64 a 68 (BÔNUS DE AUMENTO)**")
-        st.markdown('<div class="playbook-box"><div class="playbook-script">"De bônus você vai ter todo o acompanhamento na próxima empresa para conseguir o seu aumento. Acompanhamos nos primeiros 30 dias com sessão individual e grupo no WhatsApp, mapeamos os aliados estratégicos no organograma e ajudamos a construir CASEs de lucro para você apresentar no Shark Tank do Aumento Salarial antes da conversa com a sua liderança."</div></div>', unsafe_allow_html=True)
+        st.markdown("**SLIDE 47**")
+        st.markdown("""
+        <div class="playbook-box">
+            <div class="playbook-script">
+            “Finalizando os ajustes das aulas no Currículo e LinkedIn, nós fazemos com você uma sessão individual para avaliar o seu novo material. Então antes de você sair se aplicando para as vagas gastando tempo sem ter resultado, nós te ajudamos a arrumar a casa para você ter uma segurança de que o Currículo e LinkedIn estão prontos para você se inscrever e conseguir gerar entrevistas”.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("**SLIDE 48**")
+        st.markdown("""
+        <div class="playbook-box">
+            <div class="playbook-script">
+            “E você se aplicando para as vagas com um currículo que dá resultado, vai começar a aparecer entrevista. E aí, o que nós vamos fazer? Te direcionar nessa etapa também. Então quando você passar para a entrevista, vai ter uma simulação individual com 2 mentores. O objetivo aqui é que você tenha feedbacks personalizados e brutalmente sinceros para aquela entrevista específica, com base na descrição da vaga e cultura da empresa, então você não vai mais ficar sem feedback”.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("**SLIDE 49 (O QUE É ACOMPANHAMENTO)**")
+        st.markdown("""
+        <div class="playbook-box">
+            <div class="playbook-script">
+            “E como eu falei lá nos pilares da CRH, além de te direcionar nós te acompanhamos sempre olhando os resultados e fazendo análises da sua estratégia sempre que necessário para destravar todas as dificuldades e gargalos no seu processo de buscar emprego”.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("**SLIDE 50**")
+        st.markdown("""
+        <div class="playbook-box">
+            <div class="playbook-script">
+            “E aí, hoje quem está na nossa mentoria tem acesso a um sistema para a gente poder olhar com estratégia para cada uma das vagas em que a pessoa se candidatou e retirar os gargalos dos processos seletivos. Então nesse aplicativo que você vai ter disponível, tem uma ferramenta que te ajuda a fazer uma gestão melhor das suas vagas e você consegue acompanhar o andamento dos processos seletivos de uma forma mais organizada e controlada, e a gente te acompanha para entender se a estratégia que planejamos está dando certo, então você não fica sozinho(a)”.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("**SLIDE 51**")
+        st.markdown("""
+        <div class="playbook-box">
+            <div class="playbook-script">
+            “E nós também vamos te acompanhar com grupos no WhatsApp. Hoje todos os alunos têm acesso à nossa equipe de forma individual, para que consiga ser acompanhado em qualquer dificuldade nesse processo de empregabilidade de forma mais efetiva. Então você pode mandar áudios depois de uma entrevista contando como foi, por exemplo, e a gente vai te direcionando sobre os próximos passos, até você receber a sua proposta de emprego”.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("**SLIDE 52**")
+        st.markdown("""
+        <div class="playbook-box">
+            <div class="playbook-script">
+            “Nessa mesma linha, nós orientamos pedir 48h depois de receber a proposta da empresa para analisar. E nesse período de 48h nós aproveitamos para fazer com você um plantão de negociação salarial no WhatsApp, te acompanhando para conseguir aumentar o valor da proposta. A Gabi conseguiu negociar e aumentou R$4.500 no salário todos os meses usando esse método aqui. Então vamos supor que você recebeu uma proposta para ganhar R$XXXX (pretensão salarial da pessoa), o nosso objetivo vai ser você chegar nos R$XXXX (4.000 a mais do que a pretensão)”.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("**SLIDE 53**")
+        st.markdown("""
+        <div class="playbook-box">
+            <div class="playbook-script">
+            “E não foi só a Gabi que conseguiu isso, várias pessoas da comunidade já deram depoimentos. A Claudia aumentou 1k, a Jessica foi de 8k para 10k, e o José conseguiu aumentar 1.2k todos os meses, e seriam quase 16k que ficariam na mesa se não tivesse o plantão de negociação salarial”.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("**SLIDE 54 (O QUE SÃO FERRAMENTAS)**")
+        st.markdown("""
+        <div class="playbook-box">
+            <div class="playbook-script">
+            “Além de te direcionar e acompanhar, nós vamos te dar ferramentas para você sempre evoluir no processo de empregabilidade. Então eu já te falei um pouco sobre o sistema que a gente tem aqui na CRH, que é o APP Ricarreira, com funcionalidades que vão te ajudar a otimizar seu tempo”.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("**SLIDE 55**")
+        st.markdown("""
+        <div class="playbook-box">
+            <div class="playbook-script">
+            “E aí, uma das ferramentas que você vai ter acesso é o buscador de vagas, para pesquisar a nomenclatura e filtrar por estado e cidade para encontrar as vagas disponíveis no mercado em todos os ATS. Aqui você vai poder ver as descrições, os sites em que as vagas foram publicadas e se inscrever naquelas que mais fizerem sentido para o que você está buscando”.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("**SLIDE 56**")
+        st.markdown("""
+        <div class="playbook-box">
+            <div class="playbook-script">
+            “E tem uma outra ferramenta que vai te ajudar muito principalmente nessa etapa inicial de arrumar a casa, que é o acervo de currículos campeões. Aqui você vai poder se inspirar em vários currículos de 1 página dos nossos alunos, que já foram validados e aprovados nos sites de vagas”.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("**SLIDE 57**")
+        st.markdown("""
+        <div class="playbook-box">
+            <div class="playbook-script">
+            “Além dessas ferramentas que eu dei mais ênfase aqui, você vai ter disponíveis mais de 10 ferramentas para você explorar nesse período de 1 ano. E é muito legal porque você vai ter por exemplo uma biblioteca de mensagens que vai poupar o seu tempo na hora de falar com um recrutador, com modelos prontos para adaptar ao seu cenário. E todas essas funcionalidades aqui foram criadas com esse objetivo de acelerar o processo e tornar tudo mais prático para que você consiga a sua recolocação em até 51 dias”.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("**SLIDE 58 (O QUE É COMUNIDADE)**")
+        st.markdown("""
+        <div class="playbook-box">
+            <div class="playbook-script">
+            “E falando um pouco sobre o pilar de comunidade, apesar de a CRH ser uma mentoria individual, tem outras pessoas que estão buscando emprego também, e para nós é muito importante não deixar as pessoas desempregadas em casa sozinhas buscando emprego no dia a dia, sem fazer uma troca para ter ajuda e discutir sobre o que está dando certo ou errado. Então a ideia aqui é ter sempre uma inteligência coletiva, porque o trabalho de quem está desempregado é buscar trabalho”.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("**SLIDE 59**")
+        st.markdown("""
+        <div class="playbook-box">
+            <div class="playbook-script">
+            “Então pensando nisso, nós fazemos reuniões diárias com a galera que está buscando emprego. De segunda a sexta às 9h, tem uma Daily de arrumar a casa para as pessoas que entraram no método recentemente receberem avaliação de currículo e LinkedIn todos os dias. Essas Dailys são no mesmo horário do Ricafé, reparou? O objetivo é você parar de participar das lives gratuitas, porque o conteúdo fica superficial. Agora que você vai entrar na mentoria, é realmente para focar no que nós vamos construir juntos aqui na mentoria”.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("**SLIDE 60**")
+        st.markdown("""
+        <div class="playbook-box">
+            <div class="playbook-script">
+            “E de segunda a sexta às 11h tem a Daily de empregabilidade com o Ric, que é para quem já está com a casa arrumada e tem dúvidas de aplicação, networking, entrevistas. Então a ideia é tirar essas dúvidas para destravar o momento de atacar, e essa Daily é a parte mais rica da CRH, porque o pessoal sempre traz coisas novas que estão gerando resultado para conseguir emprego rápido”.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("**SLIDE 64 (BÔNUS DE AUMENTO)**")
+        st.markdown("""
+        <div class="playbook-box">
+            <div class="playbook-script">
+            “Eu foquei na parte de emprego aqui na apresentação porque é também o seu foco agora, mas de bônus você vai ter todo o acompanhamento na próxima empresa para conseguir o seu aumento.”
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("**SLIDE 65**")
+        st.markdown("""
+        <div class="playbook-box">
+            <div class="playbook-script">
+            “Então nós vamos te acompanhar nos primeiros 30 dias de empresa com uma sessão individual e um grupo no WhatsApp para já começar a acelerar a sua carreira, analisando o cenário e mapeando aliados estratégicos que vão te ajudar a crescer de forma rápida”.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("**SLIDE 66**")
+        st.markdown("""
+        <div class="playbook-box">
+            <div class="playbook-script">
+            “E nesse mapeamento de aliados, nós vamos avaliar juntos ao longo do tempo quem devem ser as pessoas do organograma da empresa para você fazer o jogo político para garantir um aumento”.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("**SLIDE 67**")
+        st.markdown("""
+        <div class="playbook-box">
+            <div class="playbook-script">
+            “Além disso, vamos te ajudar a não deixar a sua carreira de lado fazendo sessões individuais para indicar quais CASEs você precisa construir todo mês dentro da empresa para não ficar só apagando incêndio e conseguir esse aumento rápido mostrando resultados reais”.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("**SLIDE 68**")
+        st.markdown("""
+        <div class="playbook-box">
+            <div class="playbook-script">
+            “E a ideia é inclusive usar esses CASEs para pedir o aumento lá na frente, que é quando nós vamos fazer o shark tank do aumento salarial para 2 mentores te orientarem sobre o que você precisa fazer na sua apresentação de pedido de aumento antes de você ter a conversa com a sua liderança”.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("**SLIDE 71**")
+        st.markdown("""
+        <div class="playbook-box">
+            <div class="playbook-script">
+            “E agora, (Nome da pessoa), eu queria te ouvir: a CRH faz sentido para você?”<br>
+            - Esperar a pessoa responder SIM<br><br>
+            “Legal! Então de 0 a 10, o quanto você diria que tudo o que eu te apresentei aqui vai te ajudar a resolver a sua maior dificuldade hoje?”<br>
+            - Esperar a pessoa responder 10 (Se for menos, perguntar o que falta para ser 10).<br>
+            - Quebrar as objeções antes de passar para a oferta.<br><br>
+            “Maravilha. E eu acho de verdade que pelo seu momento atual, a CRH faz muito sentido para você, principalmente porque você vai receber feedback de uma forma que nunca recebeu, e isso é o que realmente vai mudar o jogo, não só para você conseguir o seu emprego, mas depois dentro da empresa também. Ninguém tem essa cultura de dar feedbacks brutalmente sinceros, e a gente tem”.<br><br>
+            - Se já tiver objeção do dinheiro ("faz sentido mas depende do valor do investimento")<br><br>
+            - “Certo, eu vou te apresentar as condições de pagamentos e preciso que você seja brutalmente sincero(a), tá? Se não fizer sentido para você financeiramente me fala aqui, porque a gente só tem mais X cadeiras disponíveis para esse mês”.<br><br>
+            - “Se você não conseguir pegar uma dessas cadeiras não tem problema, porque nossa equipe está falando com outras pessoas e a gente passa a cadeira pra frente... Mas eu acredito que pelo raio X que a gente fez aqui, você precisa de verdade desse nível de acompanhamento, concorda? É o que vai mudar o jogo para você, né?”
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
     with p_tab3:
-        st.title("Bloco 3: Oferta & Quebra de Objeções")
+        st.subheader("Bloco 3: Oferta & Quebra de Objeções")
         
-        st.markdown("**SLIDE 71 a 74 (Transição, Formações & Calculadora)**")
-        st.markdown('<div class="playbook-box"><div class="playbook-script"><b>Slide 71:</b> "E agora, (Nome da pessoa), eu queria te ouvir: a CRH faz sentido para você?"<br><i>- Esperar responder SIM.</i><br>"De 0 a 10, o quanto você diria que tudo o que eu te apresentei aqui vai te ajudar a resolver a sua maior dificuldade hoje?"<br><i>- Esperar responder 10 (Se menos, perguntar o que falta).</i><br><br><b>Slide 73 (Formações):</b> "Hoje a gente fala que a CRH vale mais do que uma faculdade ou pós. Você lembra quanto investiu nas suas formações? E com esses R$XXXX você teve direcionamento, acompanhamento e feedback individual? Não, né? As formações não têm esse acompanhamento de carreira e acabamos ficando invisíveis no mercado."<br><br><b>Slide 74 (Calculadora Tempo é Dinheiro):</b> "Na calculadora do \'tempo é dinheiro\', com sua pretensão de R$XXXX, por ano você quer ganhar R$XXXX, certo? A cada dia sem emprego são R$XXX a menos, e cada semana sem acompanhamento e feedback são R$XXXX saindo do seu bolso. Se chegar na semana que vem sem perspectiva, você está confortável em perder mais R$XXXX?"</div></div>', unsafe_allow_html=True)
+        st.markdown("**SLIDE 72**")
+        st.markdown("""
+        <div class="playbook-box">
+            <div class="playbook-script">
+            “Mas já que faz sentido, deixa eu te passar o investimento para ter o nosso acompanhamento”.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
-        st.markdown("**SLIDE 75 a 80 (Apresentação da Oferta & Sinal de R$ 500)**")
-        st.markdown('<div class="playbook-box"><div class="playbook-script"><b>Slide 75 & 76:</b> "A mentoria valeria R$51.000 se fosse só com o Ric. Com toda a nossa equipe de mentores por trás, reduzimos muito esse valor."<br><br><b>Slide 77 & 78:</b> "Para você ter esse nível de acompanhamento, colocamos uma entrada de R$500 para garantir a sua vaga. Só depois de uma semana a equipe entra em contato para alinhar o restante. Nesse período você já tem acesso a tudo: +100 aulas, 10 Dailys, ferramentas e direcionamento estratégico. R$500 é um valor acessível para você hoje?"<br><br><b>Slide 79 & 80:</b> "Falando sobre o pós, ficam parcelas de 955 no recorrente (sem tomar o limite total) ou 9.500 à vista no cartão. Mas isso você só decide daqui a 1 semana. Agora são só os R$500. E aí?"</div></div>', unsafe_allow_html=True)
+        st.markdown("**SLIDE 73 (FORMAÇÕES)**")
+        st.markdown("""
+        <div class="playbook-box">
+            <div class="playbook-script">
+            “Hoje a gente fala que a CRH vale mais do que uma faculdade, pós graduação, MBA. Você lembra quanto investiu nas suas formações?”<br><br>
+            - Esperar a pessoa responder o valor.<br><br>
+            “Entendi. E com esses R$XXXX (valor apresentado), você teve direcionamento, acompanhamento e feedback individual? Alguém te ensinou a buscar emprego, ou conseguir um aumento salarial?”<br><br>
+            - Esperar a pessoa responder NÃO.<br><br>
+            “Então, a gente fala que a CRH vale mais justamente por isso, geralmente as formações não tem mesmo esse acompanhamento próximo de carreira, e nós acabamos tendo títulos para, muitas vezes, continuar invisível no mercado, não passar nas entrevistas e ficar perdendo dinheiro”.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
-        st.subheader("Roteiro Completo de Quebra de Objeções")
+        st.markdown("**SLIDE 74 (TEMPO É DINHEIRO)**")
+        st.markdown("""
+        <div class="playbook-box">
+            <div class="playbook-script">
+            “Nós temos aqui inclusive a calculadora do “tempo é dinheiro”, que mostra a sua pretensão salarial de R$XXXX (pretensão salarial da pessoa). E se a gente olhar aqui, isso quer dizer que por ano você quer ganhar R$XXXX (valor da calculadora), certo?”<br><br>
+            “Então, conseguindo a sua recolocação, você vai estar ganhando esse valor por ano, R$XXX por dia e R$XXXX toda semana, que é o que você merece. E da mesma forma, a cada dia que você está sem emprego são R$XXX a menos, e cada semana que você passa sem direcionamento, acompanhamento e feedbacks que vão mudar o jogo custa R$XXXX, esse valor sai do seu bolso”.<br><br>
+            “Eu sei que dói fazer essa reflexão, mas esse cálculo também serve justamente para entender o que você vai ganhar investindo na sua carreira, e nós estamos vendo que são R$XXXX por ano. Então a questão aqui é: se você chegar na semana que vem sem entrevista, sem ser chamado(a), e sem uma perspectiva de ser contratado(a) você está confortável em perder mais R$XXXX?”<br><br>
+            - Esperar a pessoa responder NÃO.<br><br>
+            “Então é por isso que a CRH faz sentido para você. Nós vamos te ajudar a recuperar o tempo e o dinheiro que você já perdeu tentando sozinho(a) sem saber o que fazer para se recolocar”.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
-        st.markdown("**🔴 OBJEÇÃO DE PARCELAS / PÓS / MEDO DE NÃO CONSEGUIR:**")
-        st.markdown('<div class="playbook-box"><div class="playbook-script"><b>Lead:</b> "Preciso pensar por conta do valor das parcelas de 955 depois, eu não tenho isso tudo agora, preciso da minha reserva para sobreviver..."<br><b>Closer:</b> "O que você precisa pensar? Agora a única coisa que você precisa são os R$500, que você me falou que tem. Você dá a entrada, assiste às aulas, participa das Dailys e tem seu direcionamento estratégico. É melhor ficar uma semana sendo acompanhado(a) ou passar mais esses dias tentando sozinho(a) sem resultado?"<br><br><b>Lead:</b> "É, mas estou preocupado com o pós, não tenho dinheiro para pagar as parcelas."<br><b>Closer:</b> "A gente viu na calculadora que você vai ganhar R$XXX por dia no seu novo emprego. Será que não vale a pena fazer esse investimento e com o seu trabalho ir pagando as parcelas? Quando você se recolocar, essas parcelas dá para pagar."<br><br><b>Lead:</b> "E se eu investir e não conseguir o emprego rápido?"<br><b>Closer:</b> "E se você continuar no mesmo cenário e não conseguir entrevista nos próximos 30 dias, quanto dinheiro você vai perder? São R$XXXX (Tempo é dinheiro). Você me falou que era prioridade e de palavra, conseguir emprego não é prioridade então?<br>Além disso, você não precisa pensar no restante agora. Com a entrada de R$500 a gente até te ajuda a pensar na forma de pagamento em uma semana. E você tem a garantia condicional de 1 ano para ter seu dinheiro de volta caso o método não funcione!"</div></div>', unsafe_allow_html=True)
+        st.markdown("**SLIDE 75 (ACOMPANHAMENTO COM RIC)**")
+        st.markdown("""
+        <div class="playbook-box">
+            <div class="playbook-script">
+            “E aí, nós temos uma tabela que mostra quanto você teria que investir para ter 1 ano desse nível de acompanhamento só com o Ric. Então são 24 momentos individuais, 2 cursos (de emprego e aumento), os encontros diários e as mais de 10 ferramentas. Hoje, a mentoria vale R$51.000, se for considerar o período de 1 ano. Só que é um valor se fosse um acompanhamento só com o Ric, e nós não fazemos isso porque é impossível ele dar conta”.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
-        st.markdown("**🔴 OBJEÇÃO DE CÔNJUGE (MARIDO / ESPOSA):**")
-        st.markdown('<div class="playbook-box"><div class="playbook-script"><b>Lead:</b> "Eu não consigo fazer esse investimento sem falar com meu marido/minha esposa."<br><b>Closer:</b> "Mas você não me falou que seu marido/sua esposa te apoiava?"<br><b>Lead:</b> "Sim, apoia. Mas não posso tomar essa decisão sem discutirmos antes."<br><br><b>Closer:</b> "Certo. Mas ele(a) não entende a sua dor. Será que se olhar o seu diagnóstico, ele(a) entende como é ficar navegando horas sem resultados e ter chuva de negativas na Gupy todos os dias? Não entende.<br>Então é óbvio que ele(a) vai olhar esse valor e falar: \'Tá caro\'. Porque não entende a sua dor como a gente entende. E você falou que R$500 vocês têm… às vezes seu marido/sua esposa vai até preferir que você entre, conheça a mentoria por dentro, e você vai ganhando mais confiança para argumentar com ele(a) sobre o restante."</div></div>', unsafe_allow_html=True)
+        st.markdown("**SLIDE 76 (EQUIPE DE MENTORES)**")
+        st.markdown("""
+        <div class="playbook-box">
+            <div class="playbook-script">
+            “Pensando nisso, nós conseguimos reduzir esse valor de R$51.000 com toda a nossa equipe de mentores que temos aqui por trás das entregas. Assim a gente ajuda mais pessoas com um processo mais fluido e um investimento mais acessível”.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("**SLIDE 77**")
+        st.markdown("""
+        <div class="playbook-box">
+            <div class="playbook-script">
+            “E hoje para você ter esse nível de acompanhamento aqui na CRH, nós colocamos uma taxa de pré-matrícula de R$500 para garantir a sua vaga, e no seu momento de direcionamento estratégico nós vamos dizer se você foi aprovado(a) ou não para continuar na CRH com base nesses 3 pilares e, se for, vamos combinar como você vai levantar o restante do valor da mentoria. Caso, você não seja aprovado(a), pode pedir reembolso dos R$500”.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("**SLIDE 78**")
+        st.markdown("""
+        <div class="playbook-box">
+            <div class="playbook-script">
+            “E durante os próximos 3 dias, só com a entrada de R$500 você já vai ter acesso a 10 aulas que separamos com o passo a passo para conseguir emprego rápido, sua participação nas Dailys das 9h e 11h, mais de 10 ferramentas do APP e o seu direcionamento estratégico no momento da aprovação. Tudo o que é necessário para já começar a ver resultado. Me diz aqui, R$500 é um valor acessível para você hoje?”<br><br>
+            - Esperar a pessoa responder SIM (fazer uma pausa em silêncio)
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("**SLIDE 79**")
+        st.markdown("""
+        <div class="playbook-box">
+            <div class="playbook-script">
+            “Maravilha. Agora falando sobre o pós, o investimento fica em parcelas de 955 no recorrente, que não pega o limite total do seu cartão, é só o valor da parcela. Ou então se você preferir fazer um pagamento único (que também pode ser no cartão de crédito) fica em 9500, e isso dá uma diferença de +ou- R$2.000. Mas isso você só precisa decidir depois de conhecer melhor o método e ver como a mentoria é por dentro”.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("**SLIDE 80**")
+        st.markdown("""
+        <div class="playbook-box">
+            <div class="playbook-script">
+            “Agora são só os R$500. E aí?”
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("### QUEBRA DE OBJEÇÃO")
+        
+        st.markdown("""
+        <div class="playbook-box">
+            <div class="playbook-script">
+            <b>Lead:</b> “Preciso pensar por conta do valor das parcelas de 955 depois, eu não tenho isso tudo agora, preciso da minha reserva para sobreviver, não estava esperando que fosse tudo isso".<br><br>
+            <b>Closer:</b> “O que você precisa pensar? Agora a única coisa que você precisa são os R$500, que você me falou que tem. Então você pode dar os R$500 da entrada, começar a assistir às aulas, participar das Dailys, já ter o seu momento de direcionamento estratégico, conhecer a CRH por dentro e só depois de uma semana a nossa equipe vai entrar em contato com você para ver como vai ser o restante do pagamento. E é melhor ficar pelo menos uma semana sendo acompanhado(a) ou passar mais esses dias tentando sozinho(a) sem resultado?”<br><br>
+            <b>Lead:</b> "É, mas eu estou preocupado com o pós, não tenho dinheiro para pagar as parcelas".<br><br>
+            <b>Closer:</b> “Entendo. Mas olha, a gente viu lá na calculadora o quanto você vai ganhar por dia com o seu novo emprego, né? E por dia, você vai ganhar R$XXX (valor da calculadora)”. Então será que não vale a pena você fazer esse investimento aqui e depois com o seu trabalho você vai pagando o valor das parcelas? Sei que agora você está preocupado(a) por estar desempregado(a), mas quando você se recolocar, essas parcelas aqui dá para pagar”.<br><br>
+            <b>Lead:</b> "Eu entendo, mas preciso pensar mesmo. Não gosto de fechar nada por impulso porque não sei se vou conseguir cumprir com isso depois, e pode demorar mais de 51 dias para eu conseguir emprego. E aí, como vou pagar as parcelas depois?”<br><br>
+            <b>Closer:</b> "Olha, eu entendo tudo isso, mas a gente viu juntos aqui que você realmente precisa ser acompanhado(a), porque ficar tentando sozinho(a) não está dando resultado, né? Então eu estou aqui disponível para poder te ajudar a pensar e achar uma solução, pode ser?”<br><br>
+            <b>Lead:</b> “Não sei, eu realmente não tenho esse dinheiro agora”.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("**SLIDE 81 (Quebra de Objeção)**")
+        st.markdown("""
+        <div class="playbook-box">
+            <div class="playbook-script">
+            <b>Closer:</b> “Você me disse que é uma pessoa dedicada e que é uma prioridade conseguir esse novo emprego, não foi? A gente tem vários casos de pessoas que conseguiram se recolocar em menos de 30 dias, que entraram de cabeça na CRH. Será que com 15 dias sendo direcionado e acompanhado de perto, o cenário já não vai melhorar para você ter mais entrevistas e conseguir pagar as parcelas com seu futuro salário?”<br><br>
+            <b>Lead:</b> "Mas e se eu investir esse valor e não conseguir? Como faço para pagar as parcelas?"<br><br>
+            <b>Closer:</b> “E se você continuar no mesmo cenário e não conseguir entrevista nesses próximos 30 dias, quanto dinheiro você vai perder? São R$XXXX (Tempo é dinheiro), certo? A gente viu que a cada semana que passa você está perdendo R$XXXX. Você me falou que tem como prioridade se recolocar e que você é uma pessoa de palavra, conseguir emprego não é uma prioridade para você então?”<br><br>
+            <b>Lead:</b> "Sim, é uma prioridade. Mas também tenho que pensar em como eu vou pagar o restante depois se eu não conseguir um emprego rápido".
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("**SLIDE 82 (Quebra de Objeção)**")
+        st.markdown("""
+        <div class="playbook-box">
+            <div class="playbook-script">
+            <b>Closer:</b> “Mas não precisa pensar agora. Você falou que os R$500 não são o problema. Então você pode dar a entrada de 500, participa da mentoria e nesse período de uma semana a gente até pode te ajudar a pensar na forma de pagamento. E você vai ter uma garantia nesse 1 ano para ter o seu dinheiro de volta caso o método não funcione”.<br><br>
+            “Nós vamos te acompanhar todos os dias, e o seu trabalho vai ser buscar trabalho. Tem gente que paga 20.000, 40.000 em um MBA, uma pós-graduação para ter só um título e ficar sem feedback, acompanhamento, direcionamento, sem essas ferramentas. Então eu te garanto que a CRH é um investimento para a sua vida, não só para agora”.<br><br>
+            <b>Lead:</b> “Eu acredito muito nisso, mas realmente não dá para eu investir esse valor”.<br><br>
+            <b>Closer:</b> “Então você prefere ficar mais uma semana tentando sozinho(a) perdendo R$XXX por dia sem receber feedback, acompanhamento e direcionamento, ou prefere dar agora uma entrada de R$500, ter a nossa ajuda e se não der certo ter seu dinheiro de volta?”<br><br>
+            <b>Lead:</b> “Não é isso, a questão é que eu não tenho o valor das parcelas agora e vou ficar inadimplente se não conseguir emprego logo”.<br><br>
+            <b>Closer:</b> “Mas nós falamos que você vai ganhar R$XXXX por ano, certo? Será que não é vantagem você investir R$500 agora para ganhar esses R$XXXX no ano, e se o dinheiro que você investir não retornar, a gente devolve tudo? Você tem a opção de ficar um ano sendo acompanhado(a) por nós, ou ficar mais tempo sem conseguir entrevista, sem conseguir ganhar dinheiro… e você já perdeu R$XXXX nesse tempo que está buscando”.<br><br>
+            <b>Lead:</b> “Se eu tivesse dinheiro, faria muito sentido. Mas agora realmente não tenho como fazer esse investimento, não dá para eu comprometer outras coisas essenciais”.<br><br>
+            <b>Closer:</b> "E será que com o nosso acompanhamento além de conseguir emprego você não consegue aumentar a sua proposta salarial em R$955? O José, que eu te mostrei antes, começou a ganhar R$1.200 a mais todos os meses, não faz sentido?”<br><br>
+            <b>Lead:</b> "Mas mesmo assim, eu não sei como vou pagar os R$955 na semana que vem".<br><br>
+            <b>Closer:</b> "Mas você entende que se na semana que vem você não tiver nenhuma entrevista são menos R$XXXX no seu bolso? Será que você não tem R$1.500 essa semana para investir na sua carreira? Então você está confortável em perder esses R$XXXX, né?”
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("**Quebra de objeção (Cônjuge)**")
+        st.markdown("""
+        <div class="playbook-box">
+            <div class="playbook-script">
+            <b>Lead:</b> "Eu não consigo fazer esse investimento sem falar com meu marido/minha esposa".<br><br>
+            <b>Closer:</b> “Mas você não me falou que seu marido/sua esposa te apoiava? “<br><br>
+            <b>Lead:</b> "Sim, apoia. Mas não posso tomar essa decisão sem discutirmos antes".<br><br>
+            <b>Closer:</b> “Certo. Mas ele(a) não entende a sua dor. Será que se o seu marido/a sua esposa olhar o seu diagnóstico que fizemos, ele(a) entende como é ficar navegando horas sem resultados? Será que ele entende o que é ter chuva de negativas na gupy todos os dias?”<br><br>
+            <b>Lead:</b> "Não entende".<br><br>
+            <b>Closer:</b> “Então é óbvio que o seu marido/a sua esposa vai olhar esse valor e falar: "Tá caro". Porque ele(a) não entende a sua dor da forma como a gente entende. Nós vamos te acompanhar todos os dias, e o seu trabalho vai ser buscar trabalho. Tem gente que paga 20.000, 40.000 em um MBA, uma pós-graduação para ter só um título e ficar sem feedback, acompanhamento e direcionamento. Então eu garanto que é um investimento para a sua vida, não só para agora. E você falou que R$500 vocês têm… às vezes o seu marido/a sua esposa vai até preferir que você entre, conheça a mentoria por dentro, e você vai ganhando mais confiança para poder argumentar com ele(a) sobre o restante”.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
 # =================================----------------=============
 # ABA 2: AUDITORIAS & INDICADORES
@@ -315,7 +742,6 @@ with tab2:
     total_periodo = len(st.session_state["eventos_carregados"])
     total_analisadas = len(historico)
 
-    # Identificação flexível de colunas
     col_status = obter_coluna_case_insensitive(st.session_state["dados_planilha"], "Status")
     col_closer = obter_coluna_case_insensitive(st.session_state["dados_planilha"], "Closer")
     col_objecao = obter_coluna_case_insensitive(st.session_state["dados_planilha"], "Objeção")
@@ -353,10 +779,10 @@ with tab2:
             sub_df = df_master[df_master[col_closer].astype(str).str.strip().str.lower() == c.lower()]
             total_sessoes_c = len(sub_df)
             
-            # Execução segura sem dar AttributeError em None
-            status_series = sub_df[col_status].astype(str) if not sub_df.empty else pd.Series(dtype=str)
-            g_ato = sum(1 for s in status_series if "ato" in s.lower())
-            g_fup = sum(1 for s in status_series if "fup" in s.lower() or "follow" in s.lower())
+            # Tratamento blindado contra nulos ou não-strings
+            status_series = sub_df[col_status] if not sub_df.empty else pd.Series(dtype=object)
+            g_ato = sum(1 for s in status_series if "ato" in str(s or "").lower())
+            g_fup = sum(1 for s in status_series if "fup" in str(s or "").lower() or "follow" in str(s or "").lower())
             tot_ganho = g_ato + g_fup
             taxa_c = (tot_ganho / total_sessoes_c * 100) if total_sessoes_c > 0 else 0.0
             
@@ -541,8 +967,8 @@ with tab3:
         col_c1, col_c2, col_c3 = st.columns(3)
         tot_c = len(df_closer_filtrado)
         
-        status_series = df_closer_filtrado[col_status].astype(str) if col_status and not df_closer_filtrado.empty else pd.Series(dtype=str)
-        ganhos_c = sum(1 for s in status_series if "ganho" in s.lower())
+        status_series = df_closer_filtrado[col_status] if col_status and not df_closer_filtrado.empty else pd.Series(dtype=object)
+        ganhos_c = sum(1 for s in status_series if "ganho" in str(s or "").lower())
         taxa_ind = (ganhos_c / tot_c * 100) if tot_c > 0 else 0.0
         
         with col_c1:

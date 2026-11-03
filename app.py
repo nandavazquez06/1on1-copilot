@@ -219,7 +219,7 @@ tab1, tab2, tab3 = st.tabs([
 ])
 
 # ==============================================================
-# ABA 1: ROTEIROS & PLAYBOOK DE BOLSO (100% FIEL AO SEU TEXTO)
+# ABA 1: ROTEIROS & PLAYBOOK DE BOLSO (100% FIEL AO GOOGLE DOCS)
 # ==============================================================
 with tab1:
     st.header("📚 Roteiros & Playbook de Bolso")
@@ -678,7 +678,7 @@ with tab1:
         <div class="playbook-box">
             <div class="playbook-script">
             <b>Lead:</b> “Preciso pensar por conta do valor das parcelas de 955 depois, eu não tenho isso tudo agora, preciso da minha reserva para sobreviver, não estava esperando que fosse tudo isso".<br><br>
-            <b>Closer:</b> “O que você precisa pensar? Agora a única coisa que você precisa são os R$500, que você me falou que tem. Então você pode dar os R$500 da entrada, começar a assistir às aulas, participar das Dailys, já ter o seu momento de direcionamento estratégico, conhecer a CRH por dentro e só depois de uma semana a nossa equipe vai entrar em contato com você para ver como vai ser o restante do pagamento. E é melhor ficar pelo menos uma semana sendo acompanhado(a) ou passar mais esses dias tentando sozinho(a) sem resultado?”<br><br>
+            <b>Closer:</b> “O que você precisa pensar? Agora a única coisa que você precisa são os R$500, que você me falou que tem. Então você pode dar os R$500 da entrada, começar a assistir às aulas, participar das Dailys, já ter o seu momento de direcionamento estratégico, conhecer a CRH por dentro e só depois a nossa equipe vai entrar em contato com você para ver como vai ser o restante do pagamento. E é melhor ficar pelo menos uma semana sendo acompanhado(a) ou passar mais esses dias tentando sozinho(a) sem resultado?”<br><br>
             <b>Lead:</b> "É, mas eu estou preocupado com o pós, não tenho dinheiro para pagar as parcelas".<br><br>
             <b>Closer:</b> “Entendo. Mas olha, a gente viu lá na calculadora o quanto você vai ganhar por dia com o seu novo emprego, né? E por dia, você vai ganhar R$XXX (valor da calculadora)”. Então será que não vale a pena você fazer esse investimento aqui e depois com o seu trabalho você vai pagando o valor das parcelas? Sei que agora você está preocupado(a) por estar desempregado(a), mas quando você se recolocar, essas parcelas aqui dá para pagar”.<br><br>
             <b>Lead:</b> "Eu entendo, mas preciso pensar mesmo. Não gosto de fechar nada por impulso porque não sei se vou conseguir cumprir com isso depois, e pode demorar mais de 51 dias para eu conseguir emprego. E aí, como vou pagar as parcelas depois?”<br><br>
@@ -871,45 +871,102 @@ with tab2:
                         from openai import OpenAI
                         client = OpenAI(api_key=openai_key)
                         
-                        prompt_sistema = f"""Você é o Auditor Sênior de Vendas da Ricarreira (programa CRH, fundado por Ricardo Batista).
-Sua missão é auditar meticulosamente a chamada 1A1 com base nos ROTEIROS OFICIAIS da empresa, divididos em 3 blocos de ~20 minutos.
+                        prompt_sistema = f"""Você é o Auditor Oficial de Vendas da Ricarreira (Metodologia FHT - Closer's Central).
+Sua missão é auditar com rigor cirúrgico a chamada 1A1 gravada/transcrita com base no ROTEIRO OFICIAL DE DIAGNÓSTICO DE CARREIRA da empresa, estruturado em 3 blocos.
 
-AVALIAÇÃO ESTRUTURAL POR BLOCOS:
+CRITÉRIOS DE AUDITORIA BASEADOS NO ROTEIRO OFICIAL:
 
-📍 BLOCO 1: DIAGNÓSTICO & RAIO-X (Minuto 0 ao 20)
-- Quebra-gelo & Conexão: Fez pergunta de acolhimento ativa explorando o momento do lead/LinkedIn?
-- Acordo de Objetividade Flexível: Mencionar que a pessoa não precisa justificar todas as notas é uma boa prática para manter o controle do tempo, MAS O CLOSER TEM LIBERDADE PARA APROFUNDAR e perguntar "por quê" em notas chave quando quiser entender melhor o cenário e escavar dores.
-- Raio-X dos 5 Pilares: Passou por Currículo, LinkedIn, Entrevistas, Aumento Salarial e Mentalidade? Avaliou as respostas por notas (0 a 10) dando o retorno correto de acordo com a faixa?
-- Leitura do Gráfico: Compartilhou a tela mostrando APENAS o gráfico e utilizou a narrativa padronizada conectando que Mentalidade e Desejo de Salário só geram resultado se Currículo, LinkedIn e Entrevistas estiverem destravados? Encerrou perguntando se o lead concorda e quer mudar o cenário com urgência?
+📍 BLOCO 1: ACOLHIMENTO & RAIO-X
+1. Quebra de Gelo, Acolhimento & Expectativa:
+   - Fez perguntas de conexão e acolhimento sobre a última empresa/setor vista no LinkedIn?
+   - Investigou o momento atual e a expectativa ("O que está buscando para os próximos passos da sua carreira?")?
+2. Acordo Inicial do Raio-X:
+   - Alinhou o objetivo de entender as maiores dificuldades e explicou que as perguntas serão respondidas com notas de 0 a 10?
+   - Estabeleceu o acordo de NÃO justificar a nota por enquanto (para garantir fluidez e mostrar no gráfico depois)?
+   - Pediu compromisso: "Preciso que você seja BRUTALMENTE SINCERO(A). Posso confiar na sua palavra?"?
+3. Devolutiva por Pilares e Faixa de Nota:
+   - Apresentou o gráfico e fez a devolutiva adequada à nota dada em cada pilar:
+     * MENTALIDADE: Se 8-10, validou que não é acomodado(a) e família é prioridade; se 0-7, apontou o abalo na confiança pelas rejeições.
+     * AUMENTO SALARIAL: Se 6-10, reforçou boa articulação, mas destacou que de nada adianta sem a vaga; se 0-5, confrontou a postura puramente técnica/operacional.
+     * CURRÍCULO: Se 0-5, destacou currículo genérico focado em tarefas e não em resultados (bloqueado em ATS e recrutadores); se 6-10, validou métricas.
+     * LINKEDIN: Se 0-5, frisou que está invisível para vagas ocultas e no LinkedIn Recruiter; se 6-10, validou atração orgânica.
+     * ENTREVISTAS: Se 0-5, apontou o efeito dominó (pouco treino, nervosismo da "única chance", falta de feedbacks e submissão a salários baixos); se 6-10, validou condução.
+4. Transição para o Pitch:
+   - Concluiu com clareza: o problema NÃO é falta de capacidade técnica nem vontade, mas sim falta de método estratégico de comunicação para gerar fluxo de entrevistas nos próximos 51 dias?
+   - Fez as perguntas de transição: "Faz sentido para você? Você quer mudar esse cenário?"?
 
-📍 BLOCO 2: APRESENTAÇÃO DO PROGRAMA & SLIDES (Minuto 20 ao 40)
-- História do Herói Relutante (Slide 1): Utilizou a copy oficial explicando por que o Ricardo relutou em criar um programa individual ("Acompanhar é diferente de só ensinar", "Ouvir que precisavam se recolocar urgente")?
-- Definição do Programa (Slide 2): Apresentou a CRH como programa de aceleração de 12 meses focado em recolocação em 51 dias e aumento salarial?
-- Apresentação de Pilares vs. Entregáveis (Slides 43 a 68): Apresentou os 4 pilares (Direcionamento, Acompanhamento, Ferramentas e Comunidade), detalhando as Dailies (9h e 11h), App Ricarreira, buscador de vagas ATS, acervo de currículos e bônus de aumento salarial?
+📍 BLOCO 2: APRESENTAÇÃO DO PROGRAMA E SLIDES
+1. Slide 1 (História do Herói Relutante):
+   - Contou por que o Ricardo relutou em criar o acompanhamento ("Acompanhar é diferente de só ensinar", "Ouvir que precisavam se recolocar urgente") e apresentou como acelerador de resultados?
+   - Pediu permissão para apresentar o programa?
+2. Slide 2 (Definição da CRH):
+   - Definiu a CRH como programa de aceleração de 12 meses com direcionamento, acompanhamento e feedbacks personalizados para empregos em até 51 dias, cargos desejados/liderança e aumento salarial?
+3. Slide 3 (Depoimentos):
+   - Apresentou histórias de alunos e perguntou qual depoimento mais marcou?
+4. Pilares de Entregáveis (Slides 43 a 60):
+   - DIREIONAMENTO: Sessão de Direcionamento Estratégico individual (virar a chave da tempestade de negativas), 2 cursos online (emprego e aumento), sessão individual de validação de CV/LinkedIn e simulação de entrevista com 2 mentores?
+   - ACOMPANHAMENTO: Gestão de vagas no app, suporte individual no WhatsApp e plantão de 48h de negociação salarial (cases Gabi, Claudia, Jessica, José)?
+   - FERRAMENTAS: Buscador de vagas ATS no APP Ricarreira, acervo de currículos campeões de 1 página e biblioteca de mensagens?
+   - COMUNIDADE: Dailies diárias às 9h (arrumar a casa) e às 11h com o Ric (empregabilidade/atacar)?
+5. Bônus de Aumento Salarial (Slides 64 a 68):
+   - Acompanhamento nos primeiros 30 dias na nova empresa, mapeamento de aliados estratégicos, construção de CASEs mensais de lucro e Shark Tank do Aumento Salarial com 2 mentores?
+6. Slide 71 (Qualificação & Checagem):
+   - Perguntou se faz sentido, pediu a nota de 0 a 10 de quanto o programa resolve a dor e tratou dúvidas/objeções antes de abrir o investimento?
+   - Se houve menção precoce a dinheiro, fez o alinhamento de sinceridade brutal sobre as cadeiras limitadas?
 
-📍 BLOCO 3: PITCH, ANCORAGEM & QUEBRA DE OBJEÇÕES (Minuto 40 ao 60)
-- Checagem e Qualificação (Slide 71): Perguntou "De 0 a 10 o quanto tudo o que apresentei vai te ajudar a resolver sua maior dificuldade hoje?"?
-- DETECÇÃO DE CONFRONTO DE FORMAÇÕES (SLIDE 73): Discutiu o investimento prévio em formações/cursos para mostrar falta de investimento em CARREIRA/MENTALIDADE?
-- DETECÇÃO DA CALCULADORA "TEMPO É DINHEIRO" (SLIDE 74): Abordou a pretensão salarial e desdobrou valores em ganho/perda anual, semanal ou diário?
-- Foco na Entrada de R$ 500,00 (Slides 77 e 78): Conduziu a oferta focando no valor acessível de R$ 500,00 para garantir a vaga agora (com saldo para 1 semana em parcelas de 955)?
-- DETECÇÃO CONDICIONAL DE OBJEÇÕES: Se o lead mencionou parcelas do pós, reserva ou cônjuge/família, usou o reframe oficial. Se não mencionou cônjuge, NÃO COBRE esta etapa.
+📍 BLOCO 3: OFERTA & QUEBRA DE OBJEÇÕES
+1. Slide 73 (Confronto de Formações):
+   - Perguntou quanto o lead investiu em graduação/pós/MBA e confrontou se teve acompanhamento próximo, feedback individual ou se ensinaram a buscar emprego/aumento?
+2. Slide 74 (Calculadora Tempo é Dinheiro):
+   - Desdobrou a pretensão salarial em valor anual, diário e perda semanal por estar sem método? Confrontou: "Está confortável em perder mais R$XXXX até a semana que vem?"?
+3. Ancoragem e Oferta (Slides 75 a 80):
+   - Ancorou o valor de R$ 51.000 se fosse só com o Ric e explicou a redução com a equipe de mentores?
+   - Apresentou a taxa de pré-matrícula de R$ 500,00 para garantir a vaga e explicou que a aprovação para continuar na mentoria ocorre no direcionamento estratégico; SE APROVADO(A), combina em até 3 dias como levantar o restante (e caso não seja aprovado, há reembolso dos R$ 500)?
+   - Reforçou que durante os próximos 3 dias, a entrada de R$ 500 dá acesso a 10 aulas, Dailies das 9h e 11h, +10 ferramentas e direcionamento estratégico?
+   - Verificou: "R$ 500 é um valor acessível para você hoje?"?
+   - Explicou o pós: 12 parcelas de 955 no recorrente (sem tomar o limite total) ou 9.500 à vista no cartão?
+4. Quebra de Objeções (Slides 81 e 82):
+   - Se o lead travou nas parcelas do pós / reserva / medo de demorar mais de 51 dias: usou o ganho diário na volta ao mercado, relembrou o custo da inércia (Tempo é Dinheiro), o compromisso inicial, o acompanhamento diário e a garantia de 1 ano?
+   - Se o lead mencionou cônjuge: aplicou o reframe de que o cônjuge não vive a dor das negativas na Gupy diárias, achará "caro" por desconhecer a dor e que a entrada de R$ 500 traz segurança para avaliar por dentro? (NÃO cobre cônjuge se o lead não mencionou).
 
-STATUS REGISTRADO NA PLANILHA MASTER:
+DADOS DO CRM / BASE MASTER:
 - Status na Planilha: {status_master_auto}
 - Closer Responsável: {closer_master_auto}
-- Objeção no CRM: {objecao_master_auto}
+- Objeção Registrada: {objecao_master_auto}
+
+FORMATO OBRIGATÓRIO DE RESPOSTA:
+Comece exatamente com o cabeçalho de status e nota:
+### {"🟢 STATUS: LEAD CONVERTIDO (" + status_master_auto.upper() + ")" if is_venda_confirmada else "🔴 STATUS: NÃO CONVERTIDO"}
+
+**Resumo Executivo & Nota do Closer: [X.X / 10]**
+(Nota de 8.0 a 10.0 se Convertido/Ganho; Nota de 0.0 a 7.9 se Perdido/Não Convertido).
+
+---
+#### 1. Aderência ao Roteiro Oficial
+- **Bloco 1 (Acolhimento & Raio-X):** [Análise objetiva dos acertos e desvios no acolhimento, no acordo de 0 a 10 e nas devoluções de cada pilar]
+- **Bloco 2 (Apresentação do Programa & Slides):** [Análise da narrativa do herói relutante, dos 4 pilares e do bônus de aumento]
+- **Bloco 3 (Oferta, Ancoragens & Objeções):** [Análise do confronto de formações, calculadora Tempo é Dinheiro, oferta de R$ 500 com alinhamento de 3 dias pós-aprovação e reframes aplicados]
+
+#### 2. 🎯 Pontos Fortes da Condução
+- [Pontos positivos onde o closer seguiu a copy oficial com maestria]
+
+#### 3. 🚨 Pontos de Melhoria Críticos
+- [Gargalos, falas omitidas, falta de firmeza ou pulo de etapas do roteiro oficial]
+
+#### 4. 💡 Plano de Ação para o Próximo Treinamento
+- [Direcionamento prático e cirúrgico para o closer ajustar no próximo atendimento]
 """
 
                         if is_venda_confirmada:
-                            prompt_sistema += f"\n- VENDA CONVERTIDA ({status_master_auto}). NOTA ENTRE 8.0 E 10.0.\n\n### 🟢 STATUS: LEAD CONVERTIDO ({status_master_auto.upper()})\n\n**Resumo Executivo & Nota do Closer: [X.X / 10]**\n---\n- **🎯 Pontos Fortes da Sessão**\n- **🚨 Pontos de Melhoria Críticos**\n- **💡 Plano de Ação para o Próximo Treinamento**"
+                            prompt_sistema += f"\n- LEAD CONVERTIDO ({status_master_auto}). NOTA FINAL OBRIGATÓRIA ENTRE 8.0 E 10.0."
                         else:
-                            prompt_sistema += f"\n- NÃO CONVERTIDA (Perdido). NOTA ENTRE 0.0 E 7.9.\n\n### 🔴 STATUS: NÃO CONVERTIDO\n\n**Resumo Executivo & Nota do Closer: [X.X / 10]**\n---\n- **🎯 Pontos Fortes da Sessão**\n- **🚨 Pontos de Melhoria Críticos**\n- **💡 Plano de Ação para o Próximo Treinamento**"
+                            prompt_sistema += f"\n- LEAD NÃO CONVERTIDO ({status_master_auto}). NOTA FINAL OBRIGATÓRIA ENTRE 0.0 E 7.9."
 
                         response = client.chat.completions.create(
                             model="gpt-4o",
                             messages=[
                                 {"role": "system", "content": prompt_sistema},
-                                {"role": "user", "content": f"Lead: {nome_lead_limpo}\nTranscrição/Dados:\n{transcricao_texto}"}
+                                {"role": "user", "content": f"Lead: {nome_lead_limpo}\nTranscrição/Dados da Sessão:\n{transcricao_texto}"}
                             ],
                             temperature=0.3
                         )

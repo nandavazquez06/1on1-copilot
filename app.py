@@ -120,16 +120,23 @@ def buscar_dados_google(_credentials, email_equipe, inicio_data, fim_data, id_pl
     time_min = datetime.datetime.combine(inicio_data, datetime.time.min).isoformat() + 'Z'
     time_max = datetime.datetime.combine(fim_data, datetime.time.max).isoformat() + 'Z'
     
+    # Busca por "Diagnóstico" para contemplar o padrão novo automatizado e o manual antigo
     events_result = service_cal.events().list(
         calendarId=email_equipe,
         timeMin=time_min,
         timeMax=time_max,
-        q="Diagnóstico Gratuito de Carreira",
+        q="Diagnóstico",
         singleEvents=True,
         orderBy='startTime'
     ).execute()
     events = events_result.get('items', [])
-    eventos_filtrados = [e for e in events if "diagnóstico gratuito de carreira" in e.get('summary', '').lower()]
+    
+    # Filtra eventos que contenham "diagnóstico de carreira" ou "diagnóstico gratuito de carreira"
+    eventos_filtrados = []
+    for e in events:
+        titulo = remover_acentos(e.get('summary', ''))
+        if "diagnostico de carreira" in titulo or "diagnostico gratuito de carreira" in titulo:
+            eventos_filtrados.append(e)
 
     df_planilha = pd.DataFrame()
     try:
@@ -806,7 +813,7 @@ with tab2:
         events = st.session_state["eventos_carregados"]
         opcoes_map = {}
         for e in events:
-            nome = e.get('summary', 'Diagnóstico Gratuito de Carreira')
+            nome = e.get('summary', 'Diagnóstico de Carreira')
             data = e.get('start', {}).get('dateTime', e.get('start', {}).get('date', ''))[:10]
             try:
                 data_br = datetime.datetime.strptime(data, "%Y-%m-%d").strftime("%d/%m")
@@ -820,7 +827,10 @@ with tab2:
             evento_sel_label = st.selectbox("Selecione o Diagnóstico para Auditar:", list(opcoes_map.keys()))
             evento_obj = opcoes_map[evento_sel_label]
             nome_lead_bruto = evento_obj.get('summary', '')
-            nome_lead_limpo = re.sub(r"(?i)diagnóstico\s+gratuito\s+de\s+carreira\s*[-–:]?", "", nome_lead_bruto).strip()
+            
+            # Limpeza flexível para "Diagnóstico de Carreira - Nome" ou "Diagnóstico Gratuito de Carreira - Nome"
+            nome_lead_limpo = re.sub(r"(?i)diagn[oó]stico\s+(gratuito\s+)?de\s+carreira\s*[-–:]?", "", nome_lead_bruto).strip()
+            
             descricao_evento = evento_obj.get("description", "")
             transcricao_texto = descricao_evento if descricao_evento.strip() else f"Sessão: {nome_lead_bruto}\nData: {evento_obj.get('start', {}).get('dateTime', '')}"
 

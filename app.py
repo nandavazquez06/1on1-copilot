@@ -114,13 +114,13 @@ def obter_credenciais_google(creds_dict_json):
     ]
     return service_account.Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
 
-@st.cache_data(ttl=600, show_spinner=False)
+@st.cache_data(ttl=300, show_spinner=False)
 def buscar_dados_google(_credentials, email_equipe, inicio_data, fim_data, id_planilha):
     service_cal = build('calendar', 'v3', credentials=_credentials)
     time_min = datetime.datetime.combine(inicio_data, datetime.time.min).isoformat() + 'Z'
     time_max = datetime.datetime.combine(fim_data, datetime.time.max).isoformat() + 'Z'
     
-    # Busca por "Diagnóstico" para contemplar o padrão novo automatizado e o manual antigo
+    # Busca flexível por "Diagnóstico"
     events_result = service_cal.events().list(
         calendarId=email_equipe,
         timeMin=time_min,
@@ -131,7 +131,6 @@ def buscar_dados_google(_credentials, email_equipe, inicio_data, fim_data, id_pl
     ).execute()
     events = events_result.get('items', [])
     
-    # Filtra eventos que contenham "diagnóstico de carreira" ou "diagnóstico gratuito de carreira"
     eventos_filtrados = []
     for e in events:
         titulo = remover_acentos(e.get('summary', ''))
@@ -141,13 +140,17 @@ def buscar_dados_google(_credentials, email_equipe, inicio_data, fim_data, id_pl
     df_planilha = pd.DataFrame()
     try:
         service_sheets = build('sheets', 'v4', credentials=_credentials)
+        # Range expandido para cobrir todas as colunas até AZ e 5000 linhas
         sheet_result = service_sheets.spreadsheets().values().get(
-            spreadsheetId=id_planilha, range="Base_Master!A1:AA1000"
+            spreadsheetId=id_planilha, range="Base_Master!A1:AZ5000"
         ).execute()
         values = sheet_result.get('values', [])
         if values and len(values) > 1:
+            header_len = len(values[0])
             cols = [str(c).strip() for c in values[0]]
-            df_planilha = pd.DataFrame(values[1:], columns=cols)
+            # Normaliza linhas para ter o mesmo tamanho do cabeçalho
+            rows = [r + [''] * (header_len - len(r)) for r in values[1:]]
+            df_planilha = pd.DataFrame(rows, columns=cols)
     except Exception:
         pass
 
@@ -753,9 +756,10 @@ with tab2:
     col_closer = obter_coluna_case_insensitive(st.session_state["dados_planilha"], "Closer")
     col_objecao = obter_coluna_case_insensitive(st.session_state["dados_planilha"], "Objeção")
     col_cliente = obter_coluna_case_insensitive(st.session_state["dados_planilha"], "Cliente")
+    col_gravacao = obter_coluna_case_insensitive(st.session_state["dados_planilha"], "Link da Gravação")
 
     vendas_ato = sum(1 for item in historico if "Ato" in str(item.get("status_venda", "")))
-    vendas_fup = sum(1 for item in historico if "FUP" in str(item.get("status_venda", "")))
+    vendas_fup = sum(1 for item in historico if "Follow" in str(item.get("status_venda", "")) or "FUP" in str(item.get("status_venda", "")))
     total_convertidos = vendas_ato + vendas_fup
 
     taxa_conversao = (total_convertidos / total_analisadas * 100) if total_analisadas > 0 else 0.0
@@ -767,7 +771,7 @@ with tab2:
     with col2:
         st.markdown(f'<div class="metric-card-custom"><div class="metric-card-title">📊 Auditadas pela IA</div><div class="metric-card-value">{total_analisadas}</div></div>', unsafe_allow_html=True)
     with col3:
-        st.markdown(f'<div class="metric-card-custom"><div class="metric-card-title">🟢 Convertidos</div><div class="metric-card-value">{total_convertidos}</div><div class="metric-card-sub">{vendas_ato} Ato | {vendas_fup} FUP</div></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="metric-card-custom"><div class="metric-card-title">🟢 Convertidos</div><div class="metric-card-value">{total_convertidos}</div><div class="metric-card-sub">{vendas_ato} Ato | {vendas_fup} Follow-up</div></div>', unsafe_allow_html=True)
     with col4:
         st.markdown(f'<div class="metric-card-custom"><div class="metric-card-title">📈 Taxa de Conversão</div><div class="metric-card-value">{taxa_conversao:.1f}%</div></div>', unsafe_allow_html=True)
     with col5:
@@ -786,10 +790,10 @@ with tab2:
             sub_df = df_master[df_master[col_closer].astype(str).str.strip().str.lower() == c.lower()]
             total_sessoes_c = len(sub_df)
             
-            # Tratamento blindado contra nulos ou não-strings
             status_series = sub_df[col_status] if not sub_df.empty else pd.Series(dtype=object)
             g_ato = sum(1 for s in status_series if "ato" in str(s or "").lower())
-            g_fup = sum(1 for s in status_series if "fup" in str(s or "").lower() or "follow" in str(s or "").lower())
+            # Captura tanto 'follow-up' quanto 'fup'
+            g_fup = sum(1 for s in status_series if "follow" in str(s or "").lower() or "fup" in str(s or "").lower())
             tot_ganho = g_ato + g_fup
             taxa_c = (tot_ganho / total_sessoes_c * 100) if total_sessoes_c > 0 else 0.0
             
@@ -797,7 +801,7 @@ with tab2:
                 "Closer": c,
                 "Sessões na Planilha": total_sessoes_c,
                 "Ganho (Ato)": g_ato,
-                "Ganho (FUP)": g_fup,
+                "Ganho (Follow-up)": g_fup,
                 "Total Convertido": tot_ganho,
                 "Taxa de Conversão (%)": f"{taxa_c:.1f}%"
             })
@@ -828,7 +832,6 @@ with tab2:
             evento_obj = opcoes_map[evento_sel_label]
             nome_lead_bruto = evento_obj.get('summary', '')
             
-            # Limpeza flexível para "Diagnóstico de Carreira - Nome" ou "Diagnóstico Gratuito de Carreira - Nome"
             nome_lead_limpo = re.sub(r"(?i)diagn[oó]stico\s+(gratuito\s+)?de\s+carreira\s*[-–:]?", "", nome_lead_bruto).strip()
             
             descricao_evento = evento_obj.get("description", "")
@@ -837,6 +840,7 @@ with tab2:
         status_master_auto = "Perdido"
         closer_master_auto = "Não identificado"
         objecao_master_auto = "Sem objeção registrada"
+        link_gravacao_auto = ""
         
         if not df_master.empty and col_cliente:
             lead_norm = remover_acentos(nome_lead_limpo)
@@ -859,6 +863,8 @@ with tab2:
                 status_master_auto = str(melhor_match.get(col_status, "Perdido")).strip() if col_status else "Perdido"
                 closer_master_auto = str(melhor_match.get(col_closer, "Não identificado")).strip() if col_closer else "Não identificado"
                 objecao_master_auto = str(melhor_match.get(col_objecao, "Sem objeção registrada")).strip() if col_objecao else "Sem objeção registrada"
+                if col_gravacao:
+                    link_gravacao_auto = str(melhor_match.get(col_gravacao, "")).strip()
 
         is_venda_confirmada = "ganho" in status_master_auto.lower()
 
@@ -866,6 +872,9 @@ with tab2:
             st.success(f"🟢 **Status na Planilha Master:** `{status_master_auto}` | **Closer:** `{closer_master_auto}`")
         else:
             st.info(f"📌 **Status na Planilha Master:** `{status_master_auto}` | **Closer:** `{closer_master_auto}` | **Objeção:** `{objecao_master_auto}`")
+
+        if link_gravacao_auto and link_gravacao_auto.startswith("http"):
+            st.caption(f"🔗 [Acessar Gravação da Sessão no Drive]({link_gravacao_auto})")
 
         with col_btn:
             st.write(" ")

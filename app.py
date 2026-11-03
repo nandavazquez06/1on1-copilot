@@ -315,7 +315,7 @@ with tab1:
         <div class="playbook-box">
             <div class="playbook-script">
             "Olhando agora o seu Raio-X como um todo fica claro que o seu problema NÃO é falta de capacidade técnica e nem falta de vontade. O verdadeiro gargalo é a falta de um método estratégico para a sua carreira, porque você está travado(a) e acaba se esforçando demais, imagino que gasta horas aplicando para vagas e recebe um retorno quase nulo.<br><br>
-            O que nós precisamos fazer agora é reestruturar a sua comunicação para te dar visibilidade, ensinar você a contar a sua história de forma atraente para os recrutadores e gerar um mais entrevistas para que você seja contratado(a) nos próximos 51 dias. Faz sentido para você? Você quer mudar esse cenário?"
+            O que nós precisamos fazer agora é reestruturar a sua comunicação para te dar visibilidade, ensinar você a contar a sua história de forma atraente para os recrutadores e gerar mais entrevistas para que você seja contratado(a) nos próximos 51 dias. Faz sentido para você? Você quer mudar esse cenário?"
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -377,7 +377,7 @@ with tab1:
         st.markdown("""
         <div class="playbook-box">
             <div class="playbook-script">
-            “Então como nós vamos mapear isso? A primeira coisa é o Direcionamento Estratégico, para virar a chave de sempre ter uma tempestade de negativas para as vagas. Em uma sessão individual nós vamos avaliar o seu histórico profissional, travas, cargo e salário ideal, e você vai aprender só o necessário, sem perder tempo e dinheiro, para avançar nos processos seletivos com segurança e receber mais propostas de entrevista. Então a mentora vai te indicar quais são as aulas que você precisa assistir para melhorar o seu Currículo e LinkedIn de uma forma efetiva”.
+            “Então como nós vamos mapear isso? A primeira coisa é o Direcionamento Estratégico, para virar a chave de ter sempre uma tempestade de negativas para as vagas. Em uma sessão individual nós vamos avaliar o seu histórico profissional, travas, cargo e salário ideal, e você vai aprender só o necessário, sem perder tempo e dinheiro, para avançar nos processos seletivos com segurança e receber mais propostas de entrevista. Então a mentora vai te indicar quais são as aulas que você precisa assistir para melhorar o seu Currículo e LinkedIn de uma forma efetiva”.
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -494,7 +494,7 @@ with tab1:
         st.markdown("""
         <div class="playbook-box">
             <div class="playbook-script">
-            “E falando um pouco sobre o pilar de comunidade, apesar de a CRH ser uma mentoria individual, tem outras pessoas que estão buscando emprego também, e para nós é muito importante não deixar as pessoas desempregadas em casa sozinhas buscando emprego no dia a dia, sem fazer uma troca para ter ajuda e discutir sobre o que está dando certo ou errado. Então a ideia aqui é ter sempre uma inteligência coletiva, porque o trabalho de quem está desempregado é buscar trabalho”.
+            “E falando um pouco sobre o pilar de comunidade, apesar de a CRH ser uma mentoria individual, tem outras pessoas que estão buscando emprego também, e para nós é muito importante não deixar as pessoas desempregadas em casa sozinhas buscando emprego no dia a dia, sem fazer uma troca para ter ajuda e discutir o que está dando certo ou errado. Então a ideia aqui é ter sempre uma inteligência coletiva, porque o trabalho de quem está desempregado é buscar trabalho”.
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -678,11 +678,11 @@ with tab1:
         <div class="playbook-box">
             <div class="playbook-script">
             <b>Lead:</b> “Preciso pensar por conta do valor das parcelas de 955 depois, eu não tenho isso tudo agora, preciso da minha reserva para sobreviver, não estava esperando que fosse tudo isso".<br><br>
-            <b>Closer:</b> “O que você precisa pensar? Agora a única coisa que você precisa são os R$500, que você me falou que tem. Então você pode dar os R$500 da entrada, começar a assistir às aulas, participar das Dailys, já ter o seu momento de direcionamento estratégico, conhecer a CRH por dentro e só depois a nossa equipe vai entrar em contato com você para ver como vai ser o restante do pagamento. E é melhor ficar pelo menos uma semana sendo acompanhado(a) ou passar mais esses dias tentando sozinho(a) sem resultado?”<br><br>
+            <b>Closer:</b> “O que você precisa pensar? Agora a única coisa que você precisa são os R$500, que você me falou que tem. Então você pode dar os R$500 da entrada, começar a assistir às aulas, participar das Dailys, já ter o seu momento de direcionamento estratégico, conhecer a CRH por dentro e só depois de uma semana a nossa equipe vai entrar em contato com você para ver como vai ser o restante do pagamento. E é melhor ficar pelo menos uma semana sendo acompanhado(a) ou passar mais esses dias tentando sozinho(a) sem resultado?”<br><br>
             <b>Lead:</b> "É, mas eu estou preocupado com o pós, não tenho dinheiro para pagar as parcelas".<br><br>
             <b>Closer:</b> “Entendo. Mas olha, a gente viu lá na calculadora o quanto você vai ganhar por dia com o seu novo emprego, né? E por dia, você vai ganhar R$XXX (valor da calculadora)”. Então será que não vale a pena você fazer esse investimento aqui e depois com o seu trabalho você vai pagando o valor das parcelas? Sei que agora você está preocupado(a) por estar desempregado(a), mas quando você se recolocar, essas parcelas aqui dá para pagar”.<br><br>
             <b>Lead:</b> "Eu entendo, mas preciso pensar mesmo. Não gosto de fechar nada por impulso porque não sei se vou conseguir cumprir com isso depois, e pode demorar mais de 51 dias para eu conseguir emprego. E aí, como vou pagar as parcelas depois?”<br><br>
-            <b>Closer:</b> "Olha, eu entendo tudo isso, mas a gente viu juntos aqui que você realmente precisa ser acompanhado(a), porque ficar tentando sozinho(a) não está dando resultado, né? Então eu estou aqui disponível para poder te ajudar a pensar e achar uma solução, pode ser?”<br><br>
+            <b>Closer:</b> Olha, eu entendo tudo isso, mas a gente viu juntos aqui que você realmente precisa ser acompanhado(a), porque ficar tentando sozinho(a) não está dando resultado, né? Então eu estou aqui disponível para poder te ajudar a pensar e achar uma solução, pode ser?”<br><br>
             <b>Lead:</b> “Não sei, eu realmente não tenho esse dinheiro agora”.
             </div>
         </div>
@@ -711,9 +711,9 @@ with tab1:
             <b>Lead:</b> “Não é isso, a questão é que eu não tenho o valor das parcelas agora e vou ficar inadimplente se não conseguir emprego logo”.<br><br>
             <b>Closer:</b> “Mas nós falamos que você vai ganhar R$XXXX por ano, certo? Será que não é vantagem você investir R$500 agora para ganhar esses R$XXXX no ano, e se o dinheiro que você investir não retornar, a gente devolve tudo? Você tem a opção de ficar um ano sendo acompanhado(a) por nós, ou ficar mais tempo sem conseguir entrevista, sem conseguir ganhar dinheiro… e você já perdeu R$XXXX nesse tempo que está buscando”.<br><br>
             <b>Lead:</b> “Se eu tivesse dinheiro, faria muito sentido. Mas agora realmente não tenho como fazer esse investimento, não dá para eu comprometer outras coisas essenciais”.<br><br>
-            <b>Closer:</b> "E será que com o nosso acompanhamento além de conseguir emprego você não consegue aumentar a sua proposta salarial em R$955? O José, que eu te mostrei antes, começou a ganhar R$1.200 a mais todos os meses, não faz sentido?”<br><br>
+            <b>Closer:</b> E será que com o nosso acompanhamento além de conseguir emprego você não consegue aumentar a sua proposta salarial em R$955? O José, que eu te mostrei antes, começou a ganhar R$1.200 a mais todos os meses, não faz sentido?”<br><br>
             <b>Lead:</b> "Mas mesmo assim, eu não sei como vou pagar os R$955 na semana que vem".<br><br>
-            <b>Closer:</b> "Mas você entende que se na semana que vem você não tiver nenhuma entrevista são menos R$XXXX no seu bolso? Será que você não tem R$1.500 essa semana para investir na sua carreira? Então você está confortável em perder esses R$XXXX, né?”
+            <b>Closer:</b> Mas você entende que se na semana que vem você não tiver nenhuma entrevista são menos R$XXXX no seu bolso? Será que você não tem R$1.500 essa semana para investir na sua carreira? Então você está confortável em perder esses R$XXXX, né?”
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -904,7 +904,7 @@ CRITÉRIOS DE AUDITORIA BASEADOS NO ROTEIRO OFICIAL:
 3. Slide 3 (Depoimentos):
    - Apresentou histórias de alunos e perguntou qual depoimento mais marcou?
 4. Pilares de Entregáveis (Slides 43 a 60):
-   - DIREIONAMENTO: Sessão de Direcionamento Estratégico individual (virar a chave da tempestade de negativas), 2 cursos online (emprego e aumento), sessão individual de validação de CV/LinkedIn e simulação de entrevista com 2 mentores?
+   - DIREIONAMENTO: Sessão de Direcionamento Estratégico individual (virar a chave de ter sempre uma tempestade de negativas), 2 cursos online (emprego e aumento), sessão individual de validação de CV/LinkedIn e simulação de entrevista com 2 mentores?
    - ACOMPANHAMENTO: Gestão de vagas no app, suporte individual no WhatsApp e plantão de 48h de negociação salarial (cases Gabi, Claudia, Jessica, José)?
    - FERRAMENTAS: Buscador de vagas ATS no APP Ricarreira, acervo de currículos campeões de 1 página e biblioteca de mensagens?
    - COMUNIDADE: Dailies diárias às 9h (arrumar a casa) e às 11h com o Ric (empregabilidade/atacar)?

@@ -120,7 +120,6 @@ def buscar_dados_google(_credentials, email_equipe, inicio_data, fim_data, id_pl
     time_min = datetime.datetime.combine(inicio_data, datetime.time.min).isoformat() + 'Z'
     time_max = datetime.datetime.combine(fim_data, datetime.time.max).isoformat() + 'Z'
     
-    # Busca flexível por "Diagnóstico"
     events_result = service_cal.events().list(
         calendarId=email_equipe,
         timeMin=time_min,
@@ -140,7 +139,6 @@ def buscar_dados_google(_credentials, email_equipe, inicio_data, fim_data, id_pl
     df_planilha = pd.DataFrame()
     try:
         service_sheets = build('sheets', 'v4', credentials=_credentials)
-        # Range expandido para cobrir todas as colunas até AZ e 5000 linhas
         sheet_result = service_sheets.spreadsheets().values().get(
             spreadsheetId=id_planilha, range="Base_Master!A1:AZ5000"
         ).execute()
@@ -148,7 +146,6 @@ def buscar_dados_google(_credentials, email_equipe, inicio_data, fim_data, id_pl
         if values and len(values) > 1:
             header_len = len(values[0])
             cols = [str(c).strip() for c in values[0]]
-            # Normaliza linhas para ter o mesmo tamanho do cabeçalho
             rows = [r + [''] * (header_len - len(r)) for r in values[1:]]
             df_planilha = pd.DataFrame(rows, columns=cols)
     except Exception:
@@ -743,46 +740,74 @@ with tab1:
         """, unsafe_allow_html=True)
 
 # =================================----------------=============
-# ABA 2: AUDITORIAS & INDICADORES
+# ABA 2: AUDITORIAS & INDICADORES (MÉTRICAS AUTOMÁTICAS PELA BASE)
 # =================================----------------=============
 with tab2:
     st.header("📊 Painel Geral de Auditorias 1A1")
     
-    historico = st.session_state["historico_analises"]
-    total_periodo = len(st.session_state["eventos_carregados"])
-    total_analisadas = len(historico)
+    eventos_agenda = st.session_state["eventos_carregados"]
+    total_agendadas = len(eventos_agenda)
+    df_master = st.session_state["dados_planilha"]
 
-    col_status = obter_coluna_case_insensitive(st.session_state["dados_planilha"], "Status")
-    col_closer = obter_coluna_case_insensitive(st.session_state["dados_planilha"], "Closer")
-    col_objecao = obter_coluna_case_insensitive(st.session_state["dados_planilha"], "Objeção")
-    col_cliente = obter_coluna_case_insensitive(st.session_state["dados_planilha"], "Cliente")
-    col_gravacao = obter_coluna_case_insensitive(st.session_state["dados_planilha"], "Link da Gravação")
+    col_status = obter_coluna_case_insensitive(df_master, "Status")
+    col_closer = obter_coluna_case_insensitive(df_master, "Closer")
+    col_objecao = obter_coluna_case_insensitive(df_master, "Objeção")
+    col_cliente = obter_coluna_case_insensitive(df_master, "Cliente")
+    col_gravacao = obter_coluna_case_insensitive(df_master, "Link da Gravação")
 
-    vendas_ato = sum(1 for item in historico if "Ato" in str(item.get("status_venda", "")))
-    vendas_fup = sum(1 for item in historico if "Follow" in str(item.get("status_venda", "")) or "FUP" in str(item.get("status_venda", "")))
+    # Mapeamento automático de cada evento da agenda com a planilha
+    status_encontrados = []
+    if not df_master.empty and col_cliente and col_status:
+        for ev in eventos_agenda:
+            nome_bruto = ev.get('summary', '')
+            nome_limpo = re.sub(r"(?i)diagn[oó]stico\s+(gratuito\s+)?de\s+carreira\s*[-–:]?", "", nome_bruto).strip()
+            lead_norm = remover_acentos(nome_limpo)
+            
+            melhor_s = None
+            maior_sc = 0.0
+            for _, row in df_master.iterrows():
+                cli_plan = str(row.get(col_cliente, ""))
+                cli_norm = remover_acentos(cli_plan)
+                sc = similaridade(lead_norm, cli_norm)
+                p_nome = lead_norm.split()[0] if lead_norm else ""
+                if p_nome and (p_nome in cli_norm or cli_norm.startswith(p_nome[:3])):
+                    sc += 0.4
+                if sc > maior_sc and sc > 0.35:
+                    maior_sc = sc
+                    melhor_s = str(row.get(col_status, "Perdido")).strip()
+            
+            if melhor_s:
+                status_encontrados.append(melhor_s)
+
+    vendas_ato = sum(1 for s in status_encontrados if "ato" in s.lower())
+    vendas_fup = sum(1 for s in status_encontrados if "follow" in s.lower() or "fup" in s.lower())
     total_convertidos = vendas_ato + vendas_fup
 
-    taxa_conversao = (total_convertidos / total_analisadas * 100) if total_analisadas > 0 else 0.0
-    media_nota = (sum(item.get("nota", 0.0) for item in historico) / total_analisadas) if total_analisadas > 0 else 0.0
+    # Taxa com base no total agendado real
+    taxa_conversao = (total_convertidos / total_agendadas * 100) if total_agendadas > 0 else 0.0
+
+    historico = st.session_state["historico_analises"]
+    total_auditadas = len(historico)
+    media_nota = (sum(item.get("nota", 0.0) for item in historico) / total_auditadas) if total_auditadas > 0 else 0.0
 
     col1, col2, col3, col4, col5 = st.columns(5)
     with col1:
-        st.markdown(f'<div class="metric-card-custom"><div class="metric-card-title">📅 Sessões Agendadas</div><div class="metric-card-value">{total_periodo}</div></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="metric-card-custom"><div class="metric-card-title">📅 Sessões Agendadas</div><div class="metric-card-value">{total_agendadas}</div></div>', unsafe_allow_html=True)
     with col2:
-        st.markdown(f'<div class="metric-card-custom"><div class="metric-card-title">📊 Auditadas pela IA</div><div class="metric-card-value">{total_analisadas}</div></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="metric-card-custom"><div class="metric-card-title">📊 Auditadas pela IA</div><div class="metric-card-value">{total_auditadas}</div></div>', unsafe_allow_html=True)
     with col3:
         st.markdown(f'<div class="metric-card-custom"><div class="metric-card-title">🟢 Convertidos</div><div class="metric-card-value">{total_convertidos}</div><div class="metric-card-sub">{vendas_ato} Ato | {vendas_fup} Follow-up</div></div>', unsafe_allow_html=True)
     with col4:
         st.markdown(f'<div class="metric-card-custom"><div class="metric-card-title">📈 Taxa de Conversão</div><div class="metric-card-value">{taxa_conversao:.1f}%</div></div>', unsafe_allow_html=True)
     with col5:
-        st.markdown(f'<div class="metric-card-custom"><div class="metric-card-title">⭐ Nota Média FHT</div><div class="metric-card-value">{media_nota:.1f} / 10</div></div>', unsafe_allow_html=True)
+        nota_str = f"{media_nota:.1f} / 10" if total_auditadas > 0 else "— / 10"
+        st.markdown(f'<div class="metric-card-custom"><div class="metric-card-title">⭐ Nota Média FHT</div><div class="metric-card-value">{nota_str}</div></div>', unsafe_allow_html=True)
 
     st.markdown("---")
 
     # Tabela Performance por Closer
     st.subheader("👥 Performance Geral da Equipe de Closers")
     closers_alvo = ["Fernanda", "Ricardo", "Renata", "Thiago"]
-    df_master = st.session_state["dados_planilha"]
 
     dados_closers = []
     if not df_master.empty and col_closer and col_status:
@@ -792,7 +817,6 @@ with tab2:
             
             status_series = sub_df[col_status] if not sub_df.empty else pd.Series(dtype=object)
             g_ato = sum(1 for s in status_series if "ato" in str(s or "").lower())
-            # Captura tanto 'follow-up' quanto 'fup'
             g_fup = sum(1 for s in status_series if "follow" in str(s or "").lower() or "fup" in str(s or "").lower())
             tot_ganho = g_ato + g_fup
             taxa_c = (tot_ganho / total_sessoes_c * 100) if total_sessoes_c > 0 else 0.0
@@ -813,10 +837,9 @@ with tab2:
 
     # Auditoria da Reunião
     st.subheader("📋 Auditar Reunião 1A1")
-    if st.session_state["eventos_carregados"]:
-        events = st.session_state["eventos_carregados"]
+    if eventos_agenda:
         opcoes_map = {}
-        for e in events:
+        for e in eventos_agenda:
             nome = e.get('summary', 'Diagnóstico de Carreira')
             data = e.get('start', {}).get('dateTime', e.get('start', {}).get('date', ''))[:10]
             try:

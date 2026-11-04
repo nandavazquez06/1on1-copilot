@@ -10,7 +10,7 @@ from googleapiclient.discovery import build
 
 st.set_page_config(page_title="Central do Closer - Sessão 1A1", page_icon="📊", layout="wide")
 
-# CSS para harmonização visual: Títulos menores e textos do roteiro legíveis
+# CSS para harmonização visual e legibilidade moderna
 st.markdown("""
     <style>
     h1 {
@@ -755,7 +755,6 @@ with tab2:
     col_cliente = obter_coluna_case_insensitive(df_master, "Cliente")
     col_gravacao = obter_coluna_case_insensitive(df_master, "Link da Gravação")
 
-    # Mapeamento automático de cada evento da agenda com a planilha
     status_encontrados = []
     if not df_master.empty and col_cliente and col_status:
         for ev in eventos_agenda:
@@ -783,7 +782,6 @@ with tab2:
     vendas_fup = sum(1 for s in status_encontrados if "follow" in s.lower() or "fup" in s.lower())
     total_convertidos = vendas_ato + vendas_fup
 
-    # Taxa com base no total agendado real
     taxa_conversao = (total_convertidos / total_agendadas * 100) if total_agendadas > 0 else 0.0
 
     historico = st.session_state["historico_analises"]
@@ -802,36 +800,6 @@ with tab2:
     with col5:
         nota_str = f"{media_nota:.1f} / 10" if total_auditadas > 0 else "— / 10"
         st.markdown(f'<div class="metric-card-custom"><div class="metric-card-title">⭐ Nota Média FHT</div><div class="metric-card-value">{nota_str}</div></div>', unsafe_allow_html=True)
-
-    st.markdown("---")
-
-    # Tabela Performance por Closer
-    st.subheader("👥 Performance Geral da Equipe de Closers")
-    closers_alvo = ["Fernanda", "Ricardo", "Renata", "Thiago"]
-
-    dados_closers = []
-    if not df_master.empty and col_closer and col_status:
-        for c in closers_alvo:
-            sub_df = df_master[df_master[col_closer].astype(str).str.strip().str.lower() == c.lower()]
-            total_sessoes_c = len(sub_df)
-            
-            status_series = sub_df[col_status] if not sub_df.empty else pd.Series(dtype=object)
-            g_ato = sum(1 for s in status_series if "ato" in str(s or "").lower())
-            g_fup = sum(1 for s in status_series if "follow" in str(s or "").lower() or "fup" in str(s or "").lower())
-            tot_ganho = g_ato + g_fup
-            taxa_c = (tot_ganho / total_sessoes_c * 100) if total_sessoes_c > 0 else 0.0
-            
-            dados_closers.append({
-                "Closer": c,
-                "Sessões na Planilha": total_sessoes_c,
-                "Ganho (Ato)": g_ato,
-                "Ganho (Follow-up)": g_fup,
-                "Total Convertido": tot_ganho,
-                "Taxa de Conversão (%)": f"{taxa_c:.1f}%"
-            })
-        st.dataframe(pd.DataFrame(dados_closers), use_container_width=True)
-    else:
-        st.info("Clique em 'Sincronizar Agenda & Tabela Master' na barra lateral para carregar a performance.")
 
     st.markdown("---")
 
@@ -1046,62 +1014,143 @@ Comece exatamente com o cabeçalho de status e nota:
         with st.expander("🔍 Ver Último Feedback Completo Gerado pela IA", expanded=True):
             st.markdown(historico[-1]["feedback_completo"])
 
-# =================================----------------=============
-# ABA 3: DESEMPENHO & RANKING POR CLOSER
-# =================================----------------=============
+# ==============================================================
+# ABA 3: DESEMPENHO & RANKING POR CLOSER (ANALÍTICO E MINUCIOSO)
+# ==============================================================
 with tab3:
-    st.header("👥 Painel de Gestão e Performance por Closer")
-    st.caption("Acompanhamento individualizado para reuniões de feedback e desenvolvimento do time.")
+    st.header("👥 Gestão Analítica & Performance da Equipe de Closers")
+    st.caption("Visão executiva com benchmarking, análise forense de perdas e detalhamento de atendimentos.")
     
-    closer_selecionado = st.selectbox("Selecione o Closer para Análise Individual:", ["Fernanda", "Ricardo", "Renata", "Thiago"])
     df_master = st.session_state["dados_planilha"]
+    closers_alvo = ["Fernanda", "Ricardo", "Renata", "Thiago"]
     
     col_closer = obter_coluna_case_insensitive(df_master, "Closer")
     col_status = obter_coluna_case_insensitive(df_master, "Status")
     col_objecao = obter_coluna_case_insensitive(df_master, "Objeção")
+    col_cliente = obter_coluna_case_insensitive(df_master, "Cliente")
+    col_data = obter_coluna_case_insensitive(df_master, "Data da sessão") or obter_coluna_case_insensitive(df_master, "Data do contato")
+    col_gravacao = obter_coluna_case_insensitive(df_master, "Link da Gravação")
 
-    if not df_master.empty and col_closer:
-        df_closer_filtrado = df_master[df_master[col_closer].astype(str).str.strip().str.lower() == closer_selecionado.lower()]
+    if not df_master.empty and col_closer and col_status:
+        # 1. VISÃO COMPARATIVA GLOBAL (BENCHMARK DO TIME)
+        st.subheader("1. 📊 Benchmark Geral da Equipe (Comparativo Direto)")
         
-        col_c1, col_c2, col_c3 = st.columns(3)
-        tot_c = len(df_closer_filtrado)
-        
-        status_series = df_closer_filtrado[col_status] if col_status and not df_closer_filtrado.empty else pd.Series(dtype=object)
-        ganhos_c = sum(1 for s in status_series if "ganho" in str(s or "").lower())
-        taxa_ind = (ganhos_c / tot_c * 100) if tot_c > 0 else 0.0
-        
-        with col_c1:
-            st.metric(" Atendimentos no Período", f"{tot_c}")
-        with col_c2:
-            st.metric(" Conversões (Ato/FUP)", f"{ganhos_c}")
-        with col_c3:
-            st.metric(" Taxa de Conversão Individual", f"{taxa_ind:.1f}%")
+        lista_metricas_time = []
+        tot_geral_sessoes = 0
+        tot_geral_ganhos = 0
+
+        for c in closers_alvo:
+            sub = df_master[df_master[col_closer].astype(str).str.strip().str.lower() == c.lower()]
+            tot = len(sub)
+            tot_geral_sessoes += tot
             
+            s_series = sub[col_status].astype(str) if not sub.empty else pd.Series(dtype=str)
+            g_ato = sum(1 for s in s_series if "ato" in s.lower())
+            g_fup = sum(1 for s in s_series if "follow" in s.lower() or "fup" in s.lower())
+            tot_g = g_ato + g_fup
+            tot_geral_ganhos += tot_g
+            
+            no_show = sum(1 for s in s_series if "show" in s.lower())
+            perdidos = sum(1 for s in s_series if "perdido" in s.lower())
+            taxa = (tot_g / tot * 100) if tot > 0 else 0.0
+            taxa_show = (no_show / tot * 100) if tot > 0 else 0.0
+
+            lista_metricas_time.append({
+                "Closer": c,
+                "Atendimentos": tot,
+                "Ganho (Ato)": g_ato,
+                "Ganho (Follow-up)": g_fup,
+                "Total Convertido": tot_g,
+                "Taxa de Conversão": f"{taxa:.1f}%",
+                "Taxa_num": taxa,
+                "No-Show": no_show,
+                "% No-Show": f"{taxa_show:.1f}%",
+                "Perdidos": perdidos
+            })
+
+        df_bench = pd.DataFrame(lista_metricas_time)
+        media_time_taxa = (tot_geral_ganhos / tot_geral_sessoes * 100) if tot_geral_sessoes > 0 else 0.0
+        
+        col_t1, col_t2 = st.columns([3, 2])
+        with col_t1:
+            st.dataframe(df_bench.drop(columns=["Taxa_num"]), use_container_width=True)
+        with col_t2:
+            st.markdown(f"**Média de Conversão do Time:** `{media_time_taxa:.1f}%`")
+            graf_bench = df_bench.set_index("Closer")[["Taxa_num"]]
+            graf_bench.columns = ["Taxa de Conversão (%)"]
+            st.bar_chart(graf_bench)
+
         st.markdown("---")
+
+        # 2. RAIO-X INDIVIDUAL DO CLOSER
+        st.subheader("2. 🔍 Raio-X Individual Minucioso")
+        closer_selecionado = st.selectbox("Selecione o Closer para Análise Profunda:", closers_alvo)
         
-        col_graf1, col_graf2 = st.columns(2)
+        df_c = df_master[df_master[col_closer].astype(str).str.strip().str.lower() == closer_selecionado.lower()]
         
-        with col_graf1:
-            st.subheader("🚩 Ranking de Objeções Enfrentadas")
-            if col_objecao and not df_closer_filtrado.empty:
-                df_obj = df_closer_filtrado[df_closer_filtrado[col_objecao].astype(str).str.strip() != ""]
+        tot_c = len(df_c)
+        s_series_c = df_c[col_status].astype(str) if not df_c.empty else pd.Series(dtype=str)
+        g_ato_c = sum(1 for s in s_series_c if "ato" in s.lower())
+        g_fup_c = sum(1 for s in s_series_c if "follow" in s.lower() or "fup" in s.lower())
+        tot_g_c = g_ato_c + g_fup_c
+        perdidos_c = sum(1 for s in s_series_c if "perdido" in s.lower())
+        noshow_c = sum(1 for s in s_series_c if "show" in s.lower())
+        taxa_c = (tot_g_c / tot_c * 100) if tot_c > 0 else 0.0
+        diff_media = taxa_c - media_time_taxa
+
+        c_card1, c_card2, c_card3, c_card4, c_card5 = st.columns(5)
+        with c_card1:
+            st.markdown(f'<div class="metric-card-custom"><div class="metric-card-title">Atendimentos Registrados</div><div class="metric-card-value">{tot_c}</div></div>', unsafe_allow_html=True)
+        with c_card2:
+            st.markdown(f'<div class="metric-card-custom"><div class="metric-card-title">Vendas (Ato)</div><div class="metric-card-value">{g_ato_c}</div></div>', unsafe_allow_html=True)
+        with c_card3:
+            st.markdown(f'<div class="metric-card-custom"><div class="metric-card-title">Vendas (Follow-up)</div><div class="metric-card-value">{g_fup_c}</div></div>', unsafe_allow_html=True)
+        with c_card4:
+            sinal = "+" if diff_media >= 0 else ""
+            st.markdown(f'<div class="metric-card-custom"><div class="metric-card-title">Conversão Real</div><div class="metric-card-value">{taxa_c:.1f}%</div><div class="metric-card-sub">{sinal}{diff_media:.1f}% vs. média</div></div>', unsafe_allow_html=True)
+        with c_card5:
+            st.markdown(f'<div class="metric-card-custom"><div class="metric-card-title">Perdidos / No-Show</div><div class="metric-card-value">{perdidos_c} / {noshow_c}</div></div>', unsafe_allow_html=True)
+
+        st.markdown("---")
+
+        # 3. ANÁLISE FORENSE DE OBJEÇÕES & PERDAS
+        st.subheader("3. 🎯 Diagnóstico Forense de Objeções (Onde o closer está perdendo)")
+        col_g1, col_g2 = st.columns([1, 1])
+        
+        with col_g1:
+            if col_objecao and not df_c.empty:
+                df_obj = df_c[df_c[col_objecao].astype(str).str.strip() != ""]
                 df_obj_counts = df_obj[col_objecao].value_counts().reset_index()
-                df_obj_counts.columns = ["Objeção Registrada", "Quantidade"]
+                df_obj_counts.columns = ["Objeção Registrada", "Total de Sessões"]
                 
                 if not df_obj_counts.empty:
+                    st.write("**Ranking das Objeções Mais Enfrentadas:**")
                     st.bar_chart(df_obj_counts.set_index("Objeção Registrada"))
                 else:
-                    st.info("Nenhuma objeção registrada para este closer no período.")
+                    st.info("Nenhuma objeção detalhada registrada para este closer.")
             else:
-                st.info("Sem dados de objeção para exibir.")
+                st.info("Coluna de Objeções não identificada.")
 
-        with col_graf2:
-            st.subheader("⭐ Evolução das Auditorias (Histórico IA)")
-            hist_closer = [h for h in st.session_state["historico_analises"] if str(h.get("Closer", "")).lower() == closer_selecionado.lower()]
-            if hist_closer:
-                df_hc = pd.DataFrame(hist_closer)
-                st.line_chart(df_hc[["Data", "nota"]].set_index("Data"))
-            else:
-                st.info("Nenhuma auditoria da IA gravada para este closer nesta sessão de uso.")
+        with col_g2:
+            st.write("**Distribuição dos Status de Atendimento:**")
+            status_counts = df_c[col_status].value_counts().reset_index()
+            status_counts.columns = ["Status da Sessão", "Quantidade"]
+            st.dataframe(status_counts, use_container_width=True)
+
+        st.markdown("---")
+
+        # 4. TABELA ANALÍTICA DE SESSÕES COM LINK DE GRAVAÇÃO
+        st.subheader("4. 📋 Tabela Analítica Detalhada das Sessões")
+        
+        cols_exibir = []
+        for c_nome in [col_data, col_cliente, col_status, col_objecao, col_gravacao]:
+            if c_nome and c_nome in df_c.columns:
+                cols_exibir.append(c_nome)
+
+        if cols_exibir and not df_c.empty:
+            df_tabela_closer = df_c[cols_exibir].copy()
+            st.dataframe(df_tabela_closer, use_container_width=True)
+        else:
+            st.info("Nenhuma sessão registrada para este closer no período.")
     else:
-        st.info("Sincronize a Agenda & Tabela Master para visualizar os gráficos individuais dos closers.")
+        st.info("Sincronize a Agenda & Tabela Master na barra lateral para carregar a análise da equipe.")

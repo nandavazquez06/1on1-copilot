@@ -10,7 +10,7 @@ from googleapiclient.discovery import build
 
 st.set_page_config(page_title="Central do Closer - Sessão 1A1", page_icon="📊", layout="wide")
 
-# CSS para harmonização visual e legibilidade moderna
+# CSS para harmonização visual: Títulos menores e textos do roteiro legíveis
 st.markdown("""
     <style>
     h1 {
@@ -98,9 +98,38 @@ def similaridade(a, b):
 def obter_coluna_case_insensitive(df, col_name):
     if df is None or df.empty:
         return None
+    alvo = remover_acentos(col_name)
     for col in df.columns:
-        if str(col).strip().lower() == col_name.strip().lower():
+        if remover_acentos(str(col)) == alvo:
             return col
+    return None
+
+def detectar_coluna_data(df):
+    if df is None or df.empty:
+        return None
+    candidatos = [
+        "data da sessao", "data sessao", "data da reuniao", 
+        "data do diagnostico", "data diagnostico", "data", "data do contato"
+    ]
+    for cand in candidatos:
+        col_encontrada = obter_coluna_case_insensitive(df, cand)
+        if col_encontrada:
+            return col_encontrada
+    for col in df.columns:
+        if "data" in remover_acentos(str(col)):
+            return col
+    return None
+
+def converter_para_data(valor):
+    if pd.isna(valor) or not str(valor).strip():
+        return None
+    val_str = str(valor).strip().split(" ")[0].split("T")[0]
+    formatos = ["%d/%m/%Y", "%Y-%m-%d", "%d-%m-%Y", "%d/%m/%y", "%Y/%m/%d"]
+    for fmt in formatos:
+        try:
+            return datetime.datetime.strptime(val_str, fmt).date()
+        except ValueError:
+            pass
     return None
 
 @st.cache_resource(ttl=3600)
@@ -1015,11 +1044,11 @@ Comece exatamente com o cabeçalho de status e nota:
             st.markdown(historico[-1]["feedback_completo"])
 
 # ==============================================================
-# ABA 3: DESEMPENHO & RANKING POR CLOSER (ANALÍTICO E MINUCIOSO)
+# ABA 3: DESEMPENHO & RANKING POR CLOSER (100% FILTRADO PELO PERÍODO)
 # ==============================================================
 with tab3:
     st.header("👥 Gestão Analítica & Performance da Equipe de Closers")
-    st.caption("Visão executiva com benchmarking, análise forense de perdas e detalhamento de atendimentos.")
+    st.info(f"📅 **Exibindo dados filtrados exclusivamente pelo período selecionado:** `{inicio_data.strftime('%d/%m/%Y')}` até `{fim_data.strftime('%d/%m/%Y')}`")
     
     df_master = st.session_state["dados_planilha"]
     closers_alvo = ["Fernanda", "Ricardo", "Renata", "Thiago"]
@@ -1028,19 +1057,31 @@ with tab3:
     col_status = obter_coluna_case_insensitive(df_master, "Status")
     col_objecao = obter_coluna_case_insensitive(df_master, "Objeção")
     col_cliente = obter_coluna_case_insensitive(df_master, "Cliente")
-    col_data = obter_coluna_case_insensitive(df_master, "Data da sessão") or obter_coluna_case_insensitive(df_master, "Data do contato")
+    col_data = detectar_coluna_data(df_master)
     col_gravacao = obter_coluna_case_insensitive(df_master, "Link da Gravação")
 
     if not df_master.empty and col_closer and col_status:
-        # 1. VISÃO COMPARATIVA GLOBAL (BENCHMARK DO TIME)
-        st.subheader("1. 📊 Benchmark Geral da Equipe (Comparativo Direto)")
+        # Filtra obrigatoriamente pelo período da barra lateral
+        df_base_analise = df_master.copy()
+        if col_data:
+            df_base_analise["_data_temp"] = df_base_analise[col_data].apply(converter_para_data)
+            df_base_analise = df_base_analise[
+                (df_base_analise["_data_temp"].notna()) &
+                (df_base_analise["_data_temp"] >= inicio_data) & 
+                (df_base_analise["_data_temp"] <= fim_data)
+            ]
+        else:
+            st.warning("⚠️ Coluna de data não encontrada na Base Master para filtrar o período.")
+
+        # 1. VISÃO COMPARATIVA GLOBAL (BENCHMARK DO TIME NO PERÍODO)
+        st.subheader("1. 📊 Benchmark Geral da Equipe no Período")
         
         lista_metricas_time = []
         tot_geral_sessoes = 0
         tot_geral_ganhos = 0
 
         for c in closers_alvo:
-            sub = df_master[df_master[col_closer].astype(str).str.strip().str.lower() == c.lower()]
+            sub = df_base_analise[df_base_analise[col_closer].astype(str).str.strip().str.lower() == c.lower()]
             tot = len(sub)
             tot_geral_sessoes += tot
             
@@ -1075,18 +1116,18 @@ with tab3:
         with col_t1:
             st.dataframe(df_bench.drop(columns=["Taxa_num"]), use_container_width=True)
         with col_t2:
-            st.markdown(f"**Média de Conversão do Time:** `{media_time_taxa:.1f}%`")
+            st.markdown(f"**Média de Conversão do Time no Período:** `{media_time_taxa:.1f}%` ({tot_geral_ganhos} de {tot_geral_sessoes} sessões)")
             graf_bench = df_bench.set_index("Closer")[["Taxa_num"]]
             graf_bench.columns = ["Taxa de Conversão (%)"]
             st.bar_chart(graf_bench)
 
         st.markdown("---")
 
-        # 2. RAIO-X INDIVIDUAL DO CLOSER
-        st.subheader("2. 🔍 Raio-X Individual Minucioso")
+        # 2. RAIO-X INDIVIDUAL DO CLOSER NO PERÍODO
+        st.subheader("2. 🔍 Raio-X Individual Minucioso no Período")
         closer_selecionado = st.selectbox("Selecione o Closer para Análise Profunda:", closers_alvo)
         
-        df_c = df_master[df_master[col_closer].astype(str).str.strip().str.lower() == closer_selecionado.lower()]
+        df_c = df_base_analise[df_base_analise[col_closer].astype(str).str.strip().str.lower() == closer_selecionado.lower()]
         
         tot_c = len(df_c)
         s_series_c = df_c[col_status].astype(str) if not df_c.empty else pd.Series(dtype=str)
@@ -1100,7 +1141,7 @@ with tab3:
 
         c_card1, c_card2, c_card3, c_card4, c_card5 = st.columns(5)
         with c_card1:
-            st.markdown(f'<div class="metric-card-custom"><div class="metric-card-title">Atendimentos Registrados</div><div class="metric-card-value">{tot_c}</div></div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="metric-card-custom"><div class="metric-card-title">Atendimentos no Período</div><div class="metric-card-value">{tot_c}</div></div>', unsafe_allow_html=True)
         with c_card2:
             st.markdown(f'<div class="metric-card-custom"><div class="metric-card-title">Vendas (Ato)</div><div class="metric-card-value">{g_ato_c}</div></div>', unsafe_allow_html=True)
         with c_card3:
@@ -1114,7 +1155,7 @@ with tab3:
         st.markdown("---")
 
         # 3. ANÁLISE FORENSE DE OBJEÇÕES & PERDAS
-        st.subheader("3. 🎯 Diagnóstico Forense de Objeções (Onde o closer está perdendo)")
+        st.subheader("3. 🎯 Diagnóstico Forense de Objeções no Período")
         col_g1, col_g2 = st.columns([1, 1])
         
         with col_g1:
@@ -1127,15 +1168,18 @@ with tab3:
                     st.write("**Ranking das Objeções Mais Enfrentadas:**")
                     st.bar_chart(df_obj_counts.set_index("Objeção Registrada"))
                 else:
-                    st.info("Nenhuma objeção detalhada registrada para este closer.")
+                    st.info("Nenhuma objeção detalhada registrada para este closer neste período.")
             else:
-                st.info("Coluna de Objeções não identificada.")
+                st.info("Sem dados de objeções neste período.")
 
         with col_g2:
             st.write("**Distribuição dos Status de Atendimento:**")
-            status_counts = df_c[col_status].value_counts().reset_index()
-            status_counts.columns = ["Status da Sessão", "Quantidade"]
-            st.dataframe(status_counts, use_container_width=True)
+            if not df_c.empty:
+                status_counts = df_c[col_status].value_counts().reset_index()
+                status_counts.columns = ["Status da Sessão", "Quantidade"]
+                st.dataframe(status_counts, use_container_width=True)
+            else:
+                st.info("Sem atendimentos registrados para este closer neste período.")
 
         st.markdown("---")
 
@@ -1151,6 +1195,6 @@ with tab3:
             df_tabela_closer = df_c[cols_exibir].copy()
             st.dataframe(df_tabela_closer, use_container_width=True)
         else:
-            st.info("Nenhuma sessão registrada para este closer no período.")
+            st.info("Nenhuma sessão registrada para este closer no período selecionado.")
     else:
         st.info("Sincronize a Agenda & Tabela Master na barra lateral para carregar a análise da equipe.")

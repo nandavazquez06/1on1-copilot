@@ -2,11 +2,13 @@ import streamlit as st
 import datetime
 import json
 import re
+import io
 import unicodedata
 import pandas as pd
 from difflib import SequenceMatcher
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
+from googleapiclient.http import MediaIoBaseDownload
 
 st.set_page_config(page_title="Central do Closer - Sessão 1A1", page_icon="📊", layout="wide")
 
@@ -132,6 +134,12 @@ def converter_para_data(valor):
             pass
     return None
 
+def extrair_file_id_drive(url):
+    if not isinstance(url, str):
+        return None
+    match = re.search(r"(?:/d/|id=|folders/)([a-zA-Z0-9_-]+)", url)
+    return match.group(1) if match else None
+
 @st.cache_resource(ttl=3600)
 def obter_credenciais_google(creds_dict_json):
     creds_dict = json.loads(creds_dict_json)
@@ -139,16 +147,18 @@ def obter_credenciais_google(creds_dict_json):
         creds_dict["private_key"] = str(creds_dict["private_key"]).replace("\\n", "\n")
     SCOPES = [
         'https://www.googleapis.com/auth/calendar.readonly',
-        'https://www.googleapis.com/auth/spreadsheets.readonly'
+        'https://www.googleapis.com/auth/spreadsheets.readonly',
+        'https://www.googleapis.com/auth/drive.readonly'
     ]
     return service_account.Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
 
 @st.cache_data(ttl=300, show_spinner=False)
-def buscar_dados_google(_credentials, email_equipe, inicio_data, fim_data, id_planilha):
+def buscar_dados_google(_credentials, email_equipe, id_agenda_sdr, inicio_data, fim_data, id_planilha):
     service_cal = build('calendar', 'v3', credentials=_credentials)
     time_min = datetime.datetime.combine(inicio_data, datetime.time.min).isoformat() + 'Z'
     time_max = datetime.datetime.combine(fim_data, datetime.time.max).isoformat() + 'Z'
     
+    # 1. Busca Diagnósticos dos Closers
     events_result = service_cal.events().list(
         calendarId=email_equipe,
         timeMin=time_min,
@@ -165,6 +175,21 @@ def buscar_dados_google(_credentials, email_equipe, inicio_data, fim_data, id_pl
         if "diagnostico de carreira" in titulo or "diagnostico gratuito de carreira" in titulo:
             eventos_filtrados.append(e)
 
+    # 2. Busca Eventos da Nova Agenda de Ligações SDR
+    eventos_sdr = []
+    try:
+        sdr_res = service_cal.events().list(
+            calendarId=id_agenda_sdr,
+            timeMin=time_min,
+            timeMax=time_max,
+            singleEvents=True,
+            orderBy='startTime'
+        ).execute()
+        eventos_sdr = sdr_res.get('items', [])
+    except Exception:
+        pass
+
+    # 3. Busca Planilha Master
     df_planilha = pd.DataFrame()
     try:
         service_sheets = build('sheets', 'v4', credentials=_credentials)
@@ -180,13 +205,51 @@ def buscar_dados_google(_credentials, email_equipe, inicio_data, fim_data, id_pl
     except Exception:
         pass
 
-    return eventos_filtrados, df_planilha
+    return eventos_filtrados, eventos_sdr, df_planilha
+
+@st.cache_data(ttl=180, show_spinner=False)
+def listar_gravacoes_meet_sdr(_credentials, codigo_sala="xwi-kaoa-upm"):
+    """Busca diretamente no Google Drive gravações da sala fixa do Meet."""
+    try:
+        service_drive = build('drive', 'v3', credentials=_credentials)
+        query = f"name contains '{codigo_sala}' and trashed = false and (mimeType contains 'video/' or mimeType contains 'audio/')"
+        res = service_drive.files().list(
+            q=query,
+            fields="files(id, name, mimeType, createdTime, size, webViewLink)",
+            orderBy="createdTime desc",
+            pageSize=50
+        ).execute()
+        return res.get('files', [])
+    except Exception:
+        return []
+
+def baixar_arquivo_drive(_credentials, file_id):
+    service_drive = build('drive', 'v3', credentials=_credentials)
+    meta = service_drive.files().get(fileId=file_id, fields="id, name, mimeType").execute()
+    request = service_drive.files().get_media(fileId=file_id)
+    fh = io.BytesIO()
+    downloader = MediaIoBaseDownload(fh, request)
+    done = False
+    while not done:
+        status, done = downloader.next_chunk()
+    fh.seek(0)
+    return fh.read(), meta.get("mimeType", "audio/mp4"), meta.get("name", "gravacao_sdr.mp4")
 
 if "historico_analises" not in st.session_state:
     st.session_state["historico_analises"] = []
 
+if "transcricoes_sdr" not in st.session_state:
+    st.session_state["transcricoes_sdr"] = {}
+
+if "eventos_sdr_carregados" not in st.session_state:
+    st.session_state["eventos_sdr_carregados"] = []
+
+if "gravacoes_drive_sdr" not in st.session_state:
+    st.session_state["gravacoes_drive_sdr"] = []
+
 openai_key = st.secrets.get("openai_api_key", "")
 id_agenda_secrets = st.secrets.get("google_calendar_id", "")
+ID_AGENDA_SDR = "c_5c8ff34bbccb4e45d7051c42cc8f4b8a431b41334fffb74313e5c15adeda4daf@group.calendar.google.com"
 ID_PLANILHA_REAL = "1LsWvNf3XBmmNnICtP2BLKl3-NN7yAIF2WV0pgqw3onU"
 
 # Sidebar - Configurações
@@ -199,7 +262,7 @@ else:
 st.sidebar.markdown("---")
 st.sidebar.header("📅 Filtro por Período")
 
-email_equipe = st.sidebar.text_input("ID da Agenda da Equipe:", value=id_agenda_secrets)
+email_equipe = st.sidebar.text_input("ID da Agenda dos Closers:", value=id_agenda_secrets)
 
 periodo_selecionado = st.sidebar.selectbox(
     "Selecione o Período:",
@@ -235,21 +298,29 @@ if st.sidebar.button("🔄 Sincronizar Agenda & Tabela Master", use_container_wi
             creds_json = json.dumps(dict(st.secrets["google_credentials"]))
             credentials = obter_credenciais_google(creds_json)
             
-            with st.spinner("⚡ Carregando dados da Agenda e Planilha..."):
+            with st.spinner("⚡ Carregando Agendas, Planilha e Gravações SDR..."):
                 buscar_dados_google.clear()
-                eventos, df_planilha = buscar_dados_google(credentials, email_equipe, inicio_data, fim_data, ID_PLANILHA_REAL)
+                listar_gravacoes_meet_sdr.clear()
+                eventos, eventos_sdr, df_planilha = buscar_dados_google(
+                    credentials, email_equipe, ID_AGENDA_SDR, inicio_data, fim_data, ID_PLANILHA_REAL
+                )
+                gravacoes_drive = listar_gravacoes_meet_sdr(credentials, "xwi-kaoa-upm")
+                
                 st.session_state["eventos_carregados"] = eventos
+                st.session_state["eventos_sdr_carregados"] = eventos_sdr
                 st.session_state["dados_planilha"] = df_planilha
+                st.session_state["gravacoes_drive_sdr"] = gravacoes_drive
 
-            st.sidebar.success(f"Encontrados {len(st.session_state['eventos_carregados'])} Diagnósticos!")
+            st.sidebar.success(f"Diagnósticos: {len(eventos)} | Calls SDR: {len(eventos_sdr) + len(gravacoes_drive)}")
         else:
             st.sidebar.error("Seção [google_credentials] não encontrada nas Secrets.")
     except Exception as e:
         st.sidebar.error(f"Erro ao sincronizar: {str(e)}")
 
-# ESTRUTURA DE ABAS PRINCIPAIS DO APP
-tab1, tab2, tab3 = st.tabs([
+# ESTRUTURA DE ABAS PRINCIPAIS DO APP (4 ABAS)
+tab1, tab2, tab3, tab4 = st.tabs([
     "📚 Roteiros & Playbook de Bolso", 
+    "🎧 Ligações SDR (Meet)",
     "📊 Auditorias & Indicadores", 
     "👥 Desempenho & Ranking por Closer"
 ])
@@ -768,10 +839,152 @@ with tab1:
         </div>
         """, unsafe_allow_html=True)
 
-# =================================----------------=============
-# ABA 2: AUDITORIAS & INDICADORES (MÉTRICAS AUTOMÁTICAS PELA BASE)
-# =================================----------------=============
+# ==============================================================
+# ABA 2: LIGAÇÕES SDR (AGENDA DEDICADA + SALA MEET xwi-kaoa-upm)
+# ==============================================================
 with tab2:
+    st.header("🎧 Ligações SDR & Gravações de Pré-Qualificação")
+    st.caption(f"Conectado à Agenda SDR (`{ID_AGENDA_SDR[:22]}...`) e à sala fixa do Meet (`meet.google.com/xwi-kaoa-upm`).")
+
+    eventos_sdr = st.session_state["eventos_sdr_carregados"]
+    gravacoes_drive = st.session_state["gravacoes_drive_sdr"]
+
+    if eventos_sdr or gravacoes_drive:
+        # Unifica as opções de gravações vindas da Agenda SDR e do Drive
+        opcoes_sdr = {}
+
+        for ev in eventos_sdr:
+            titulo = ev.get("summary", "Ligação SDR")
+            dt_ini = ev.get("start", {}).get("dateTime", ev.get("start", {}).get("date", ""))
+            dt_fmt = dt_ini[:16].replace("T", " ") if dt_ini else ""
+            
+            # Procura anexos no evento (gravações do Meet anexadas pelo Calendar)
+            anexos = ev.get("attachments", [])
+            file_id = None
+            web_link = ""
+            for a in anexos:
+                if "drive.google.com" in a.get("fileUrl", ""):
+                    file_id = a.get("fileId") or extrair_file_id_drive(a.get("fileUrl", ""))
+                    web_link = a.get("fileUrl", "")
+                    break
+            
+            # Se não veio em attachments, tenta extrair da descrição
+            if not file_id:
+                desc = ev.get("description", "")
+                file_id = extrair_file_id_drive(desc)
+
+            status_anexo = "🔊 Áudio Anexado" if file_id else "📅 Evento na Agenda"
+            label = f"[{dt_fmt}] {titulo} ({status_anexo})"
+            opcoes_sdr[label] = {
+                "tipo": "agenda",
+                "titulo": titulo,
+                "data": dt_fmt,
+                "descricao": ev.get("description", ""),
+                "file_id": file_id,
+                "web_link": web_link
+            }
+
+        for g in gravacoes_drive:
+            nome_arq = g.get("name", "Gravação Meet")
+            criado = g.get("createdTime", "")[:16].replace("T", " ")
+            label = f"🎥 [Drive - {criado}] {nome_arq}"
+            opcoes_sdr[label] = {
+                "tipo": "drive",
+                "titulo": nome_arq,
+                "data": criado,
+                "descricao": "",
+                "file_id": g.get("id"),
+                "web_link": g.get("webViewLink", "")
+            }
+
+        item_sdr_sel = st.selectbox("Selecione a Ligação/Gravação do SDR para ouvir:", list(opcoes_sdr.keys()))
+        dados_call = opcoes_sdr[item_sdr_sel]
+
+        st.markdown("---")
+        col_p1, col_p2 = st.columns([1.2, 1])
+
+        with col_p1:
+            st.subheader("🔊 Player de Áudio da Ligação")
+            if dados_call["web_link"]:
+                st.markdown(f"🔗 **[Abrir arquivo original no Google Drive]({dados_call['web_link']})**")
+
+            if dados_call["file_id"]:
+                if st.button("▶️ Carregar Áudio no Player", use_container_width=True):
+                    if "google_credentials" in st.secrets:
+                        with st.spinner("⏳ Baixando áudio da gravação do Meet..."):
+                            try:
+                                creds_json = json.dumps(dict(st.secrets["google_credentials"]))
+                                credentials = obter_credenciais_google(creds_json)
+                                audio_bytes, mime_t, nome_f = baixar_arquivo_drive(credentials, dados_call["file_id"])
+                                st.session_state["sdr_audio_bytes"] = audio_bytes
+                                st.session_state["sdr_audio_mime"] = mime_t
+                                st.session_state["sdr_audio_id"] = dados_call["file_id"]
+                            except Exception as e:
+                                st.error(f"Não foi possível baixar o arquivo (verifique se a pasta Meet Recordings está compartilhada com a conta de serviço): {str(e)}")
+
+                if st.session_state.get("sdr_audio_bytes") and st.session_state.get("sdr_audio_id") == dados_call["file_id"]:
+                    st.audio(st.session_state["sdr_audio_bytes"], format=st.session_state.get("sdr_audio_mime", "audio/mp4"))
+
+                    if st.button("📝 Transcrever & Resumir Pontos-Chave para o Closer (IA)", use_container_width=True):
+                        if not openai_key:
+                            st.error("🔑 Configure a OpenAI API Key na barra lateral.")
+                        else:
+                            with st.spinner("🤖 Transcrevendo ligação do SDR..."):
+                                try:
+                                    from openai import OpenAI
+                                    client = OpenAI(api_key=openai_key)
+                                    
+                                    audio_file = io.BytesIO(st.session_state["sdr_audio_bytes"])
+                                    audio_file.name = "ligacao_sdr.mp4"
+                                    
+                                    transc = client.audio.transcriptions.create(
+                                        model="whisper-1",
+                                        file=audio_file,
+                                        language="pt"
+                                    )
+                                    texto_t = transc.text
+
+                                    resumo = client.chat.completions.create(
+                                        model="gpt-4o",
+                                        messages=[
+                                            {"role": "system", "content": "Você é um especialista em vendas consultivas. Resuma esta ligação de SDR em bullet points curtos para preparar o Closer antes do diagnóstico: 1) Momento atual e maior dor; 2) Pretensão salarial/cargo; 3) Urgência e objeções antecipadas."},
+                                            {"role": "user", "content": texto_t}
+                                        ],
+                                        temperature=0.3
+                                    )
+                                    fid = dados_call["file_id"]
+                                    st.session_state["transcricoes_sdr"][fid] = {
+                                        "resumo": resumo.choices[0].message.content,
+                                        "completo": texto_t
+                                    }
+                                except Exception as ex:
+                                    st.error(f"Erro na transcrição: {str(ex)}")
+
+                    fid = dados_call["file_id"]
+                    if fid in st.session_state["transcricoes_sdr"]:
+                        st.markdown("#### 📋 Briefing Pré-Sessão (Resumo IA)")
+                        st.info(st.session_state["transcricoes_sdr"][fid]["resumo"])
+                        with st.expander("Ler transcrição completa da call"):
+                            st.write(st.session_state["transcricoes_sdr"][fid]["completo"])
+            else:
+                st.warning("Este evento ainda não possui arquivo de gravação anexado no Calendar ou no Drive.")
+
+        with col_p2:
+            st.subheader("📝 Detalhes & Notas do Agendamento")
+            st.markdown(f"**Título:** {dados_call['titulo']}")
+            st.markdown(f"**Data/Hora:** {dados_call['data']}")
+            if dados_call["descricao"]:
+                st.markdown("**Notas / Descrição do Evento:**")
+                st.info(dados_call["descricao"])
+            else:
+                st.caption("Sem anotações adicionais na descrição deste agendamento.")
+    else:
+        st.info("👈 Clique em **'🔄 Sincronizar Agenda & Tabela Master'** na barra lateral para carregar as ligações da nova agenda SDR e da sala `xwi-kaoa-upm`.")
+
+# ==============================================================
+# ABA 3: AUDITORIAS & INDICADORES (MÉTRICAS AUTOMÁTICAS PELA BASE)
+# ==============================================================
+with tab3:
     st.header("📊 Painel Geral de Auditorias 1A1")
     
     eventos_agenda = st.session_state["eventos_carregados"]
@@ -1044,9 +1257,9 @@ Comece exatamente com o cabeçalho de status e nota:
             st.markdown(historico[-1]["feedback_completo"])
 
 # ==============================================================
-# ABA 3: DESEMPENHO & RANKING POR CLOSER (100% FILTRADO PELO PERÍODO)
+# ABA 4: DESEMPENHO & RANKING POR CLOSER (100% FILTRADO PELO PERÍODO)
 # ==============================================================
-with tab3:
+with tab4:
     st.header("👥 Gestão Analítica & Performance da Equipe de Closers")
     st.info(f"📅 **Exibindo dados filtrados exclusivamente pelo período selecionado:** `{inicio_data.strftime('%d/%m/%Y')}` até `{fim_data.strftime('%d/%m/%Y')}`")
     
@@ -1061,7 +1274,6 @@ with tab3:
     col_gravacao = obter_coluna_case_insensitive(df_master, "Link da Gravação")
 
     if not df_master.empty and col_closer and col_status:
-        # Filtra obrigatoriamente pelo período da barra lateral
         df_base_analise = df_master.copy()
         if col_data:
             df_base_analise["_data_temp"] = df_base_analise[col_data].apply(converter_para_data)
@@ -1073,7 +1285,6 @@ with tab3:
         else:
             st.warning("⚠️ Coluna de data não encontrada na Base Master para filtrar o período.")
 
-        # 1. VISÃO COMPARATIVA GLOBAL (BENCHMARK DO TIME NO PERÍODO)
         st.subheader("1. 📊 Benchmark Geral da Equipe no Período")
         
         lista_metricas_time = []
@@ -1123,7 +1334,6 @@ with tab3:
 
         st.markdown("---")
 
-        # 2. RAIO-X INDIVIDUAL DO CLOSER NO PERÍODO
         st.subheader("2. 🔍 Raio-X Individual Minucioso no Período")
         closer_selecionado = st.selectbox("Selecione o Closer para Análise Profunda:", closers_alvo)
         
@@ -1154,7 +1364,6 @@ with tab3:
 
         st.markdown("---")
 
-        # 3. ANÁLISE FORENSE DE OBJEÇÕES & PERDAS
         st.subheader("3. 🎯 Diagnóstico Forense de Objeções no Período")
         col_g1, col_g2 = st.columns([1, 1])
         
@@ -1183,7 +1392,6 @@ with tab3:
 
         st.markdown("---")
 
-        # 4. TABELA ANALÍTICA DE SESSÕES COM LINK DE GRAVAÇÃO
         st.subheader("4. 📋 Tabela Analítica Detalhada das Sessões")
         
         cols_exibir = []

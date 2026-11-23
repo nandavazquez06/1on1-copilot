@@ -177,6 +177,7 @@ def buscar_dados_google(_credentials, email_equipe, id_agenda_sdr, inicio_data, 
 
     # 2. Busca Eventos da Agenda de Ligações SDR
     eventos_sdr = []
+    erro_sdr = ""
     if id_agenda_sdr.strip():
         try:
             sdr_res = service_cal.events().list(
@@ -188,7 +189,7 @@ def buscar_dados_google(_credentials, email_equipe, id_agenda_sdr, inicio_data, 
             ).execute()
             eventos_sdr = sdr_res.get('items', [])
         except Exception as e_sdr:
-            st.session_state["erro_agenda_sdr"] = str(e_sdr)
+            erro_sdr = str(e_sdr)
 
     # 3. Busca Planilha Master
     df_planilha = pd.DataFrame()
@@ -206,7 +207,7 @@ def buscar_dados_google(_credentials, email_equipe, id_agenda_sdr, inicio_data, 
     except Exception:
         pass
 
-    return eventos_filtrados, eventos_sdr, df_planilha
+    return eventos_filtrados, eventos_sdr, erro_sdr, df_planilha
 
 @st.cache_data(ttl=180, show_spinner=False)
 def listar_gravacoes_meet_sdr(_credentials, codigo_sala="xwi-kaoa-upm"):
@@ -316,13 +317,14 @@ if st.sidebar.button("🔄 Sincronizar Agendas & Tabela Master", use_container_w
             with st.spinner("⚡ Carregando Agendas, Planilha e Gravações SDR..."):
                 buscar_dados_google.clear()
                 listar_gravacoes_meet_sdr.clear()
-                eventos, eventos_sdr, df_planilha = buscar_dados_google(
+                eventos, eventos_sdr, erro_sdr, df_planilha = buscar_dados_google(
                     credentials, email_equipe, id_agenda_sdr_input, inicio_data, fim_data, ID_PLANILHA_REAL
                 )
                 gravacoes_drive = listar_gravacoes_meet_sdr(credentials, "xwi-kaoa-upm")
                 
                 st.session_state["eventos_carregados"] = eventos
                 st.session_state["eventos_sdr_carregados"] = eventos_sdr
+                st.session_state["erro_agenda_sdr"] = erro_sdr
                 st.session_state["dados_planilha"] = df_planilha
                 st.session_state["gravacoes_drive_sdr"] = gravacoes_drive
 
@@ -862,7 +864,7 @@ with tab2:
     st.caption(f"Agenda SDR Conectada: `{id_agenda_sdr_input}` | Sala Meet: `meet.google.com/xwi-kaoa-upm`")
 
     if st.session_state.get("erro_agenda_sdr"):
-        st.warning(f"⚠️ Aviso ao acessar a Agenda SDR: `{st.session_state['erro_agenda_sdr']}` — Verifique se esta nova agenda foi compartilhada com o e-mail da conta de serviço.")
+        st.warning(f"⚠️ Aviso ao acessar a Agenda SDR: `{st.session_state['erro_agenda_sdr']}` — Verifique se esta nova agenda foi compartilhada com `robo-auditor-1a1@crh-dashboard-1a1.iam.gserviceaccount.com`.")
 
     eventos_sdr = st.session_state["eventos_sdr_carregados"]
     gravacoes_drive = st.session_state["gravacoes_drive_sdr"]

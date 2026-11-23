@@ -175,19 +175,20 @@ def buscar_dados_google(_credentials, email_equipe, id_agenda_sdr, inicio_data, 
         if "diagnostico de carreira" in titulo or "diagnostico gratuito de carreira" in titulo:
             eventos_filtrados.append(e)
 
-    # 2. Busca Eventos da Nova Agenda de Ligações SDR
+    # 2. Busca Eventos da Agenda de Ligações SDR
     eventos_sdr = []
-    try:
-        sdr_res = service_cal.events().list(
-            calendarId=id_agenda_sdr,
-            timeMin=time_min,
-            timeMax=time_max,
-            singleEvents=True,
-            orderBy='startTime'
-        ).execute()
-        eventos_sdr = sdr_res.get('items', [])
-    except Exception:
-        pass
+    if id_agenda_sdr.strip():
+        try:
+            sdr_res = service_cal.events().list(
+                calendarId=id_agenda_sdr.strip(),
+                timeMin=time_min,
+                timeMax=time_max,
+                singleEvents=True,
+                orderBy='startTime'
+            ).execute()
+            eventos_sdr = sdr_res.get('items', [])
+        except Exception as e_sdr:
+            st.session_state["erro_agenda_sdr"] = str(e_sdr)
 
     # 3. Busca Planilha Master
     df_planilha = pd.DataFrame()
@@ -247,9 +248,12 @@ if "eventos_sdr_carregados" not in st.session_state:
 if "gravacoes_drive_sdr" not in st.session_state:
     st.session_state["gravacoes_drive_sdr"] = []
 
+if "erro_agenda_sdr" not in st.session_state:
+    st.session_state["erro_agenda_sdr"] = ""
+
 openai_key = st.secrets.get("openai_api_key", "")
 id_agenda_secrets = st.secrets.get("google_calendar_id", "")
-ID_AGENDA_SDR = "c_5c8ff34bbccb4e45d7051c42cc8f4b8a431b41334fffb74313e5c15adeda4daf@group.calendar.google.com"
+ID_AGENDA_SDR_PADRAO = "c_5c8ff34bbccb4e45d7051c42cc8f4b8a431b41334fffb74313e5c15adeda4daf@group.calendar.google.com"
 ID_PLANILHA_REAL = "1LsWvNf3XBmmNnICtP2BLKl3-NN7yAIF2WV0pgqw3onU"
 
 # Sidebar - Configurações
@@ -260,9 +264,19 @@ else:
     openai_key = st.sidebar.text_input("OpenAI API Key (Manual)", type="password")
 
 st.sidebar.markdown("---")
-st.sidebar.header("📅 Filtro por Período")
+st.sidebar.header("📅 Agendas & Período")
 
-email_equipe = st.sidebar.text_input("ID da Agenda dos Closers:", value=id_agenda_secrets)
+email_equipe = st.sidebar.text_input(
+    "1️⃣ Agenda dos Closers (Diagnósticos):", 
+    value=id_agenda_secrets,
+    help="Agenda principal onde ficam os Diagnósticos de Carreira."
+)
+
+id_agenda_sdr_input = st.sidebar.text_input(
+    "2️⃣ Agenda das Ligações SDR (Meet):", 
+    value=ID_AGENDA_SDR_PADRAO,
+    help="Agenda dedicada às chamadas de pré-qualificação dos SDRs."
+)
 
 periodo_selecionado = st.sidebar.selectbox(
     "Selecione o Período:",
@@ -292,7 +306,8 @@ if "eventos_carregados" not in st.session_state:
 if "dados_planilha" not in st.session_state:
     st.session_state["dados_planilha"] = pd.DataFrame()
 
-if st.sidebar.button("🔄 Sincronizar Agenda & Tabela Master", use_container_width=True):
+if st.sidebar.button("🔄 Sincronizar Agendas & Tabela Master", use_container_width=True):
+    st.session_state["erro_agenda_sdr"] = ""
     try:
         if "google_credentials" in st.secrets:
             creds_json = json.dumps(dict(st.secrets["google_credentials"]))
@@ -302,7 +317,7 @@ if st.sidebar.button("🔄 Sincronizar Agenda & Tabela Master", use_container_wi
                 buscar_dados_google.clear()
                 listar_gravacoes_meet_sdr.clear()
                 eventos, eventos_sdr, df_planilha = buscar_dados_google(
-                    credentials, email_equipe, ID_AGENDA_SDR, inicio_data, fim_data, ID_PLANILHA_REAL
+                    credentials, email_equipe, id_agenda_sdr_input, inicio_data, fim_data, ID_PLANILHA_REAL
                 )
                 gravacoes_drive = listar_gravacoes_meet_sdr(credentials, "xwi-kaoa-upm")
                 
@@ -311,7 +326,7 @@ if st.sidebar.button("🔄 Sincronizar Agenda & Tabela Master", use_container_wi
                 st.session_state["dados_planilha"] = df_planilha
                 st.session_state["gravacoes_drive_sdr"] = gravacoes_drive
 
-            st.sidebar.success(f"Diagnósticos: {len(eventos)} | Calls SDR: {len(eventos_sdr) + len(gravacoes_drive)}")
+            st.sidebar.success(f"Diagnósticos: {len(eventos)} | Calls SDR: {len(eventos_sdr)} (+{len(gravacoes_drive)} Drive)")
         else:
             st.sidebar.error("Seção [google_credentials] não encontrada nas Secrets.")
     except Exception as e:
@@ -834,7 +849,7 @@ with tab1:
             <b>Lead:</b> "Sim, apoia. Mas não posso tomar essa decisão sem discutirmos antes".<br><br>
             <b>Closer:</b> “Certo. Mas ele(a) não entende a sua dor. Será que se o seu marido/a sua esposa olhar o seu diagnóstico que fizemos, ele(a) entende como é ficar navegando horas sem resultados? Será que ele entende o que é ter chuva de negativas na gupy todos os dias?”<br><br>
             <b>Lead:</b> "Não entende".<br><br>
-            <b>Closer:</b> “Então é óbvio que o seu marido/a sua esposa vai olhar esse valor e falar: "Tá caro". Porque ele(a) não entende a sua dor da forma como a gente entende. Nós vamos te acompanhar todos os dias, e o seu trabalho vai ser buscar trabalho. Tem gente que paga 20.000, 40.000 em um MBA, uma pós-graduação para ter só um título e ficar sem feedback, acompanhamento e direcionamento. Então eu garanto que é um investimento para a sua vida, não só para agora. E você falou que R$500 vocês têm… às vezes o seu marido/a sua esposa vai até preferir que você entre, conheça a mentoria por dentro, e você vai ganhando mais confiança para poder argumentar com ele(a) sobre o restante”.
+            <b>Closer:</b> “Então é óbvio que o seu marido/a sua esposa vai olhar esse valor e falar: "Tá caro". Porque ele(a) não entende a sua dor da forma como a gente entende. Nós vamos te acompanhar todos os dias, e o seu trabalho vai ser buscar trabalho. Tem gente que paga 20.000, 40.000 em um MBA, uma pós-graduação para ter só um título e ficar sem feedback, acompanhamento, direcionamento. Então eu garanto que é um investimento para a sua vida, não só para agora. E você falou que R$500 vocês têm… às vezes o seu marido/a sua esposa vai até preferir que você entre, conheça a mentoria por dentro, e você vai ganhando mais confiança para poder argumentar com ele(a) sobre o restante”.
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -844,13 +859,15 @@ with tab1:
 # ==============================================================
 with tab2:
     st.header("🎧 Ligações SDR & Gravações de Pré-Qualificação")
-    st.caption(f"Conectado à Agenda SDR (`{ID_AGENDA_SDR[:22]}...`) e à sala fixa do Meet (`meet.google.com/xwi-kaoa-upm`).")
+    st.caption(f"Agenda SDR Conectada: `{id_agenda_sdr_input}` | Sala Meet: `meet.google.com/xwi-kaoa-upm`")
+
+    if st.session_state.get("erro_agenda_sdr"):
+        st.warning(f"⚠️ Aviso ao acessar a Agenda SDR: `{st.session_state['erro_agenda_sdr']}` — Verifique se esta nova agenda foi compartilhada com o e-mail da conta de serviço.")
 
     eventos_sdr = st.session_state["eventos_sdr_carregados"]
     gravacoes_drive = st.session_state["gravacoes_drive_sdr"]
 
     if eventos_sdr or gravacoes_drive:
-        # Unifica as opções de gravações vindas da Agenda SDR e do Drive
         opcoes_sdr = {}
 
         for ev in eventos_sdr:
@@ -858,7 +875,6 @@ with tab2:
             dt_ini = ev.get("start", {}).get("dateTime", ev.get("start", {}).get("date", ""))
             dt_fmt = dt_ini[:16].replace("T", " ") if dt_ini else ""
             
-            # Procura anexos no evento (gravações do Meet anexadas pelo Calendar)
             anexos = ev.get("attachments", [])
             file_id = None
             web_link = ""
@@ -868,12 +884,11 @@ with tab2:
                     web_link = a.get("fileUrl", "")
                     break
             
-            # Se não veio em attachments, tenta extrair da descrição
             if not file_id:
                 desc = ev.get("description", "")
                 file_id = extrair_file_id_drive(desc)
 
-            status_anexo = "🔊 Áudio Anexado" if file_id else "📅 Evento na Agenda"
+            status_anexo = "🔊 Áudio Anexado" if file_id else "📅 Evento na Agenda SDR"
             label = f"[{dt_fmt}] {titulo} ({status_anexo})"
             opcoes_sdr[label] = {
                 "tipo": "agenda",
@@ -979,7 +994,7 @@ with tab2:
             else:
                 st.caption("Sem anotações adicionais na descrição deste agendamento.")
     else:
-        st.info("👈 Clique em **'🔄 Sincronizar Agenda & Tabela Master'** na barra lateral para carregar as ligações da nova agenda SDR e da sala `xwi-kaoa-upm`.")
+        st.info("👈 Clique em **'🔄 Sincronizar Agendas & Tabela Master'** na barra lateral para carregar as ligações da Agenda SDR.")
 
 # ==============================================================
 # ABA 3: AUDITORIAS & INDICADORES (MÉTRICAS AUTOMÁTICAS PELA BASE)
@@ -1242,7 +1257,7 @@ Comece exatamente com o cabeçalho de status e nota:
                     except Exception as err:
                         st.error(f"Erro na análise: {str(err)}")
     else:
-        st.info("👈 Selecione o período na barra lateral e clique em 'Sincronizar Agenda & Tabela Master'.")
+        st.info("👈 Selecione o período na barra lateral e clique em 'Sincronizar Agendas & Tabela Master'.")
 
     st.markdown("---")
 
@@ -1405,4 +1420,4 @@ with tab4:
         else:
             st.info("Nenhuma sessão registrada para este closer no período selecionado.")
     else:
-        st.info("Sincronize a Agenda & Tabela Master na barra lateral para carregar a análise da equipe.")
+        st.info("Sincronize as Agendas & Tabela Master na barra lateral para carregar a análise da equipe.")

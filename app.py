@@ -3,6 +3,9 @@ import datetime
 import json
 import re
 import io
+import os
+import tempfile
+import subprocess
 import unicodedata
 import pandas as pd
 from difflib import SequenceMatcher
@@ -225,17 +228,93 @@ def listar_gravacoes_meet_sdr(_credentials, codigo_sala="xwi-kaoa-upm"):
     except Exception:
         return []
 
-def baixar_arquivo_drive(_credentials, file_id):
+def baixar_e_otimizar_audio_drive(_credentials, file_id):
+    """Baixa o arquivo do Drive e extrai MP3 leve via ffmpeg para evitar cortes no player e erro 413."""
     service_drive = build('drive', 'v3', credentials=_credentials)
     meta = service_drive.files().get(fileId=file_id, fields="id, name, mimeType").execute()
     request = service_drive.files().get_media(fileId=file_id)
-    fh = io.BytesIO()
-    downloader = MediaIoBaseDownload(fh, request)
-    done = False
-    while not done:
-        status, done = downloader.next_chunk()
-    fh.seek(0)
-    return fh.read(), meta.get("mimeType", "audio/mp4"), meta.get("name", "gravacao_sdr.mp4")
+    
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as tmp_in:
+        downloader = MediaIoBaseDownload(tmp_in, request)
+        done = False
+        while not done:
+            _, done = downloader.next_chunk()
+        in_path = tmp_in.name
+
+    out_path = in_path + ".mp3"
+    try:
+        # Extrai apenas áudio mono 16kHz 32kbps (super leve, claro para voz e sem engasgos)
+        cmd = [
+            "ffmpeg", "-y", "-i", in_path,
+            "-vn", "-ac", "1", "-ar", "16000", "-b:a", "32k",
+            out_path
+        ]
+        subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
+        with open(out_path, "rb") as f:
+            audio_bytes = f.read()
+        mime_final = "audio/mp3"
+    except Exception:
+        # Fallback caso ffmpeg não esteja disponível no ambiente
+        with open(in_path, "rb") as f:
+            audio_bytes = f.read()
+        mime_final = meta.get("mimeType", "audio/mp4")
+    finally:
+        if os.path.exists(in_path):
+            os.remove(in_path)
+        if os.path.exists(out_path):
+            os.remove(out_path)
+
+    return audio_bytes, mime_final, meta.get("name", "gravacao_sdr.mp3")
+
+def transcrever_audio_em_blocos(client, audio_bytes, mime_type):
+    """Divide áudios maiores que 22MB em pedaços de 20 minutos para nunca dar Error 413 no Whisper."""
+    limite_bytes = 22 * 1024 * 1024
+    ext = ".mp3" if "mp3" in mime_type else ".mp4"
+    
+    if len(audio_bytes) <= limite_bytes:
+        audio_file = io.BytesIO(audio_bytes)
+        audio_file.name = f"ligacao_sdr{ext}"
+        transc = client.audio.transcriptions.create(
+            model="whisper-1",
+            file=audio_file,
+            language="pt"
+        )
+        return transc.text
+
+    # Se passar de 22MB, fatia usando ffmpeg em segmentos de 20 minutos (1200 segundos)
+    with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as tmp_src:
+        tmp_src.write(audio_bytes)
+        src_path = tmp_src.name
+
+    partes_dir = tempfile.mkdtemp()
+    pattern = os.path.join(partes_dir, "parte_%03d.mp3")
+    textos = []
+    try:
+        cmd = [
+            "ffmpeg", "-y", "-i", src_path,
+            "-f", "segment", "-segment_time", "1200",
+            "-ac", "1", "-ar", "16000", "-b:a", "32k",
+            pattern
+        ]
+        subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
+        arquivos_parte = sorted(os.listdir(partes_dir))
+        for idx, nome_p in enumerate(arquivos_parte):
+            caminho_p = os.path.join(partes_dir, nome_p)
+            with open(caminho_p, "rb") as fp:
+                t_resp = client.audio.transcriptions.create(
+                    model="whisper-1",
+                    file=fp,
+                    language="pt"
+                )
+                textos.append(f"[Parte {idx+1}]\n{t_resp.text}")
+            os.remove(caminho_p)
+    finally:
+        if os.path.exists(src_path):
+            os.remove(src_path)
+        if os.path.exists(partes_dir):
+            os.rmdir(partes_dir)
+
+    return "\n\n".join(textos)
 
 if "historico_analises" not in st.session_state:
     st.session_state["historico_analises"] = []
@@ -921,51 +1000,49 @@ with tab2:
         col_p1, col_p2 = st.columns([1.2, 1])
 
         with col_p1:
-            st.subheader("🔊 Player de Áudio da Ligação")
+            st.subheader("🔊 Player de Áudio Otimizado")
             if dados_call["web_link"]:
                 st.markdown(f"🔗 **[Abrir arquivo original no Google Drive]({dados_call['web_link']})**")
 
             if dados_call["file_id"]:
-                if st.button("▶️ Carregar Áudio no Player", use_container_width=True):
+                if st.button("▶️ Carregar & Otimizar Áudio no Player", use_container_width=True):
                     if "google_credentials" in st.secrets:
-                        with st.spinner("⏳ Baixando áudio da gravação do Meet..."):
+                        with st.spinner("⏳ Baixando e extraindo áudio limpo (sem vídeo pesado)..."):
                             try:
                                 creds_json = json.dumps(dict(st.secrets["google_credentials"]))
                                 credentials = obter_credenciais_google(creds_json)
-                                audio_bytes, mime_t, nome_f = baixar_arquivo_drive(credentials, dados_call["file_id"])
+                                audio_bytes, mime_t, nome_f = baixar_e_otimizar_audio_drive(credentials, dados_call["file_id"])
                                 st.session_state["sdr_audio_bytes"] = audio_bytes
                                 st.session_state["sdr_audio_mime"] = mime_t
                                 st.session_state["sdr_audio_id"] = dados_call["file_id"]
                             except Exception as e:
-                                st.error(f"Não foi possível baixar o arquivo (verifique se a pasta Meet Recordings está compartilhada com a conta de serviço): {str(e)}")
+                                st.error(f"Não foi possível baixar o arquivo: {str(e)}")
 
                 if st.session_state.get("sdr_audio_bytes") and st.session_state.get("sdr_audio_id") == dados_call["file_id"]:
-                    st.audio(st.session_state["sdr_audio_bytes"], format=st.session_state.get("sdr_audio_mime", "audio/mp4"))
+                    tamanho_mb = len(st.session_state["sdr_audio_bytes"]) / (1024 * 1024)
+                    st.caption(f"Áudio otimizado carregado ({tamanho_mb:.1f} MB) — pronto para reprodução contínua.")
+                    st.audio(st.session_state["sdr_audio_bytes"], format=st.session_state.get("sdr_audio_mime", "audio/mp3"))
 
                     if st.button("📝 Transcrever & Resumir Pontos-Chave para o Closer (IA)", use_container_width=True):
                         if not openai_key:
                             st.error("🔑 Configure a OpenAI API Key na barra lateral.")
                         else:
-                            with st.spinner("🤖 Transcrevendo ligação do SDR..."):
+                            with st.spinner("🤖 Transcrevendo gravação em blocos (suporta ligações longas)..."):
                                 try:
                                     from openai import OpenAI
                                     client = OpenAI(api_key=openai_key)
                                     
-                                    audio_file = io.BytesIO(st.session_state["sdr_audio_bytes"])
-                                    audio_file.name = "ligacao_sdr.mp4"
-                                    
-                                    transc = client.audio.transcriptions.create(
-                                        model="whisper-1",
-                                        file=audio_file,
-                                        language="pt"
+                                    texto_t = transcrever_audio_em_blocos(
+                                        client,
+                                        st.session_state["sdr_audio_bytes"],
+                                        st.session_state.get("sdr_audio_mime", "audio/mp3")
                                     )
-                                    texto_t = transc.text
 
                                     resumo = client.chat.completions.create(
                                         model="gpt-4o",
                                         messages=[
-                                            {"role": "system", "content": "Você é um especialista em vendas consultivas. Resuma esta ligação de SDR em bullet points curtos para preparar o Closer antes do diagnóstico: 1) Momento atual e maior dor; 2) Pretensão salarial/cargo; 3) Urgência e objeções antecipadas."},
-                                            {"role": "user", "content": texto_t}
+                                            {"role": "system", "content": "Você é um especialista em vendas consultivas. Resuma esta gravação de pré-qualificação (SDR) organizando por cada candidato/lead conversado na gravação, destacando: 1) Nome do lead; 2) Momento atual e maior dor; 3) Pretensão salarial/cargo; 4) Urgência e objeções antecipadas."},
+                                            {"role": "user", "content": texto_t[:60000]}
                                         ],
                                         temperature=0.3
                                     )
@@ -981,7 +1058,7 @@ with tab2:
                     if fid in st.session_state["transcricoes_sdr"]:
                         st.markdown("#### 📋 Briefing Pré-Sessão (Resumo IA)")
                         st.info(st.session_state["transcricoes_sdr"][fid]["resumo"])
-                        with st.expander("Ler transcrição completa da call"):
+                        with st.expander("Ler transcrição completa da gravação"):
                             st.write(st.session_state["transcricoes_sdr"][fid]["completo"])
             else:
                 st.warning("Este evento ainda não possui arquivo de gravação anexado no Calendar ou no Drive.")
